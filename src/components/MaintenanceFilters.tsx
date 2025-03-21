@@ -1,5 +1,5 @@
 import React from 'react';
-import { Customer, Equipment, MaintenanceFilters } from '../types';
+import type { Customer, Equipment, MaintenanceFilters } from '../types';
 import { DateRangePicker } from './DateRangePicker';
 
 interface MaintenanceFiltersProps {
@@ -9,6 +9,7 @@ interface MaintenanceFiltersProps {
   equipment: Equipment[];
 }
 
+// Remove the export of the MaintenanceFilters component
 export function MaintenanceFilters({ filters, onFiltersChange, customers, equipment }: MaintenanceFiltersProps) {
   return (
     <div className="bg-white p-4 rounded-lg shadow mb-6 space-y-4">
