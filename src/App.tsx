@@ -1,39 +1,521 @@
-import React, { useState } from 'react';
-import { Stethoscope } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
-import { EquipmentForm } from './components/EquipmentForm';
-import { EquipmentList } from './components/EquipmentList';
+import React, { useState, useEffect } from 'react';
+import { Plus, Wrench, Bell, Calendar, Settings } from 'lucide-react';
+import { supabase, isAuthenticated, ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/supabase';
+import { format } from 'date-fns';
+import toast, { Toaster } from 'react-hot-toast';
+import { Customer, Equipment, MaintenanceRecord, MaintenanceFilters } from './types';
+import { MaintenanceFilters as MaintenanceFiltersComponent } from './components/MaintenanceFilters';
+import { EditModal } from './components/EditModal';
+import { calculateAge } from './utils/age';
 
 function App() {
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
+  const [filters, setFilters] = useState<MaintenanceFilters>({});
+  const [editingItem, setEditingItem] = useState<{
+    type: 'customer' | 'equipment' | 'maintenance';
+    data: Customer | Equipment | MaintenanceRecord;
+  } | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showEquipmentForm, setShowEquipmentForm] = useState(false);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'maintenance' | 'equipment' | 'customers'>('maintenance');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleEquipmentAdded = () => {
-    setRefreshTrigger((prev) => prev + 1);
-  };
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  async function checkAuth() {
+    const authenticated = await isAuthenticated();
+    setIsLoggedIn(authenticated);
+    if (authenticated) {
+      fetchData();
+    }
+  }
+
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    
+    // Validate against admin credentials
+    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+      toast.error('Invalid credentials. Please use admin credentials.');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      setIsLoggedIn(true);
+      fetchData();
+      toast.success('Logged in successfully');
+    } catch (error) {
+      console.error('Error logging in:', error);
+      toast.error('Failed to log in. Please try again.');
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setIsLoggedIn(false);
+      setEquipment([]);
+      setCustomers([]);
+      setMaintenanceRecords([]);
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast.error('Failed to log out');
+    }
+  }
+
+  async function fetchData() {
+    try {
+      const [equipmentRes, customersRes, maintenanceRes] = await Promise.all([
+        supabase.from('equipment').select('*').order('name'),
+        supabase.from('customers').select('*').order('name'),
+        supabase.from('maintenance_records').select(`
+          *,
+          equipment:equipment_id(*),
+          customer:customer_id(*)
+        `).order('next_service_date'),
+      ]);
+
+      if (equipmentRes.data) setEquipment(equipmentRes.data);
+      if (customersRes.data) setCustomers(customersRes.data);
+      if (maintenanceRes.data) setMaintenanceRecords(maintenanceRes.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load data');
+    }
+  }
+
+  async function handleSave(data: any) {
+    try {
+      let error;
+      switch (editingItem?.type) {
+        case 'customer':
+          ({ error } = await supabase
+            .from('customers')
+            .update(data)
+            .eq('id', data.id));
+          break;
+        case 'equipment':
+          ({ error } = await supabase
+            .from('equipment')
+            .update(data)
+            .eq('id', data.id));
+          break;
+        case 'maintenance':
+          ({ error } = await supabase
+            .from('maintenance_records')
+            .update(data)
+            .eq('id', data.id));
+          break;
+      }
+
+      if (error) throw error;
+
+      toast.success('Updated successfully');
+      fetchData();
+    } catch (error) {
+      console.error('Error updating:', error);
+      toast.error('Failed to update');
+    }
+  }
+
+  async function handleDelete(type: string, id: string) {
+    try {
+      let error;
+      switch (type) {
+        case 'customer':
+          ({ error } = await supabase
+            .from('customers')
+            .delete()
+            .eq('id', id));
+          break;
+        case 'equipment':
+          ({ error } = await supabase
+            .from('equipment')
+            .delete()
+            .eq('id', id));
+          break;
+        case 'maintenance':
+          ({ error } = await supabase
+            .from('maintenance_records')
+            .delete()
+            .eq('id', id));
+          break;
+      }
+
+      if (error) throw error;
+
+      toast.success('Deleted successfully');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting:', error);
+      toast.error('Failed to delete');
+    }
+  }
+
+  const filteredMaintenanceRecords = maintenanceRecords.filter(record => {
+    if (filters.customer_id && record.customer_id !== filters.customer_id) return false;
+    if (filters.equipment_id && record.equipment_id !== filters.equipment_id) return false;
+    if (filters.model_number && !record.equipment.model_number.includes(filters.model_number)) return false;
+    
+    const installationDate = new Date(record.installation_date);
+    if (filters.installation_date_range?.[0] && installationDate < filters.installation_date_range[0]) return false;
+    if (filters.installation_date_range?.[1] && installationDate > filters.installation_date_range[1]) return false;
+
+    const warrantyEndDate = new Date(record.warranty_end_date);
+    if (filters.warranty_end_date_range?.[0] && warrantyEndDate < filters.warranty_end_date_range[0]) return false;
+    if (filters.warranty_end_date_range?.[1] && warrantyEndDate > filters.warranty_end_date_range[1]) return false;
+
+    const serviceStartDate = new Date(record.service_start_date);
+    if (filters.service_date_range?.[0] && serviceStartDate < filters.service_date_range[0]) return false;
+    if (filters.service_date_range?.[1] && serviceStartDate > filters.service_date_range[1]) return false;
+
+    return true;
+  });
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="flex items-center justify-center mb-8">
+            <Wrench className="h-10 w-10 text-blue-600" />
+            <h1 className="ml-3 text-2xl font-bold text-gray-900">Medical Equipment Maintenance</h1>
+          </div>
+          
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <input
+                type="email"
+                name="email"
+                required
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <input
+                type="password"
+                name="password"
+                required
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <button
+                type="submit"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Sign In
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
       <Toaster position="top-right" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center">
-            <Stethoscope className="h-8 w-8 text-blue-600" />
-            <h1 className="ml-3 text-2xl font-bold text-gray-900">Medical Equipment Management</h1>
+      
+      <nav className="bg-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <Wrench className="h-8 w-8 text-blue-600" />
+              <span className="ml-2 text-xl font-semibold">Medical Equipment Maintenance</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowCustomerForm(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Add Customer
+              </button>
+              <button
+                onClick={() => setShowEquipmentForm(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <Settings className="h-5 w-5 mr-2" />
+                Add Equipment
+              </button>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <Calendar className="h-5 w-5 mr-2" />
+                Add Maintenance
+              </button>
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('maintenance')}
+                className={`${
+                  activeTab === 'maintenance'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                Maintenance Records
+              </button>
+              <button
+                onClick={() => setActiveTab('equipment')}
+                className={`${
+                  activeTab === 'equipment'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                Equipment List
+              </button>
+              <button
+                onClick={() => setActiveTab('customers')}
+                className={`${
+                  activeTab === 'customers'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                Customers
+              </button>
+            </nav>
           </div>
         </div>
 
-        <div className="space-y-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Equipment</h2>
-            <EquipmentForm onEquipmentAdded={handleEquipmentAdded} />
-          </div>
+        {activeTab === 'maintenance' && (
+          <>
+            <MaintenanceFiltersComponent
+              filters={filters}
+              onFiltersChange={setFilters}
+              customers={customers}
+              equipment={equipment}
+            />
+            <div className="bg-white shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Maintenance Records</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model Number</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial No</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty End</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredMaintenanceRecords.map((record) => (
+                        <tr key={record.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{record.customer.name}</div>
+                            <div className="text-sm text-gray-500">{record.customer.bio_medical_email}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {record.equipment.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {record.equipment.model_number}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {record.serial_no}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {format(new Date(record.installation_date), 'PP')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {calculateAge(record.installation_date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {format(new Date(record.warranty_end_date), 'PP')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              record.service_status === 'completed' ? 'bg-green-100 text-green-800' :
+                              record.service_status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {record.service_status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {format(new Date(record.service_start_date), 'PP')} - {format(new Date(record.service_end_date), 'PP')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => setEditingItem({ type: 'maintenance', data: record })}
+                              className="text-indigo-600 hover:text-indigo-900 mr-2"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete('maintenance', record.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Equipment Inventory</h2>
-            <EquipmentList refreshTrigger={refreshTrigger} />
+        {activeTab === 'equipment' && (
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Equipment List</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model Number</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {equipment.map((eq) => (
+                      <tr key={eq.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {eq.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {eq.model_number}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {eq.notes}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => setEditingItem({ type: 'equipment', data: eq })}
+                            className="text-indigo-600 hover:text-indigo-900 mr-2"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete('equipment', eq.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        )}
+
+        {activeTab === 'customers' && (
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Customers</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio Medical Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio Medical Contact</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio Medical HOD</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {customers.map((customer) => (
+                      <tr key={customer.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {customer.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {customer.bio_medical_email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {customer.bio_medical_contact}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {customer.bio_medical_hod_name}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {customer.notes}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => setEditingItem({ type: 'customer', data: customer })}
+                            className="text-indigo-600 hover:text-indigo-900 mr-2"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete('customer', customer.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editingItem && (
+          <EditModal
+            type={editingItem.type}
+            data={editingItem.data}
+            onClose={() => setEditingItem(null)}
+            onSave={handleSave}
+            customers={customers}
+            equipment={equipment}
+          />
+        )}
+      </main>
     </div>
   );
 }
