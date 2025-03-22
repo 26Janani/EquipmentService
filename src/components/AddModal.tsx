@@ -37,7 +37,7 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
       currentDate.setHours(0, 0, 0, 0);
 
       if (serviceEndDate < currentDate) {
-        toast.error('Service end date cannot be lesser than current date.');
+        toast.error('Service end date must be greater than or equal to current date');
         return;
       }
     }
@@ -207,12 +207,11 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
         <label className="block text-sm font-medium text-gray-700">Service End Date</label>
         <input
           type="date"
-          max={new Date().toISOString().split('T')[0]}
           onChange={(e) => setFormData({ ...formData, service_end_date: e.target.value })}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           required
         />
-        <p className="mt-1 text-sm text-gray-500">Service end date cannot be lesser than current date.</p>
+        <p className="mt-1 text-sm text-gray-500">Service end date must be greater than or equal to current date</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Amount</label>
