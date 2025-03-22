@@ -3,6 +3,7 @@ import { MaintenanceVisit } from '../types';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { Pencil, Trash2, X, Save, XCircle } from 'lucide-react';
 
 interface VisitModalProps {
   maintenanceId: string;
@@ -124,11 +125,10 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500"
+            title="Close modal"
           >
             <span className="sr-only">Close</span>
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-6 w-6" />
           </button>
         </div>
         
@@ -236,18 +236,20 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                           />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                           <button
                             onClick={() => handleEditVisit(editingVisit)}
-                            className="text-green-600 hover:text-green-900"
+                            className="inline-flex items-center text-green-600 hover:text-green-900"
+                            title="Save changes"
                           >
-                            Save
+                            <Save className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => setEditingVisit(null)}
-                            className="text-gray-600 hover:text-gray-900"
+                            className="inline-flex items-center text-gray-600 hover:text-gray-900"
+                            title="Cancel editing"
                           >
-                            Cancel
+                            <XCircle className="h-4 w-4" />
                           </button>
                         </td>
                       </>
@@ -259,18 +261,20 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                         <td className="px-6 py-4 text-sm text-gray-900">{visit.work_done}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{visit.attended_by}</td>
                         {!isExpired && (
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                             <button
                               onClick={() => setEditingVisit(visit)}
-                              className="text-indigo-600 hover:text-indigo-900"
+                              className="inline-flex items-center text-indigo-600 hover:text-indigo-900"
+                              title="Edit visit"
                             >
-                              Edit
+                              <Pencil className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleRemoveVisit(visit.id)}
-                              className="text-red-600 hover:text-red-900"
+                              className="inline-flex items-center text-red-600 hover:text-red-900"
+                              title="Delete visit"
                             >
-                              Delete
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
                         )}

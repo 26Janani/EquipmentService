@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Wrench, Bell, Calendar, Settings, Download } from 'lucide-react';
+import { Plus, Wrench, Bell, Calendar, Settings, Download, Pencil, Trash2, Eye } from 'lucide-react';
 import { supabase, isAuthenticated, ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/supabase';
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
@@ -426,28 +426,32 @@ function App() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               <button
                                 onClick={() => setEditingVisits(record)}
-                                className="text-blue-600 hover:text-blue-900"
+                                className="inline-flex items-center text-blue-600 hover:text-blue-900"
+                                title="View visits"
                               >
-                                {record.visits?.length || 0} visits
+                                <Eye className="h-4 w-4 mr-1" />
+                                <span>{record.visits?.length || 0} visits</span>
                               </button>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-500">
                               {record.notes}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                               <button
                                 onClick={() => !expired && setEditingItem({ type: 'maintenance', data: record })}
-                                className={`text-indigo-600 hover:text-indigo-900 mr-2 ${expired ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                title={expired ? 'Cannot edit expired records' : undefined}
+                                className={`inline-flex items-center ${expired ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-indigo-600 hover:text-indigo-900'}`}
+                                title={expired ? 'Cannot edit expired records' : 'Edit record'}
+                                disabled={expired}
                               >
-                                Edit
+                                <Pencil className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => !expired && handleDelete('maintenance', record.id)}
-                                className={`text-red-600 hover:text-red-900 ${expired ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                title={expired ? 'Cannot delete expired records' : undefined}
+                                className={`inline-flex items-center ${expired ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-red-600 hover:text-red-900'}`}
+                                title={expired ? 'Cannot delete expired records' : 'Delete record'}
+                                disabled={expired}
                               >
-                                Delete
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </td>
                           </tr>
@@ -501,18 +505,20 @@ function App() {
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {eq.notes}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                           <button
                             onClick={() => setEditingItem({ type: 'equipment', data: eq })}
-                            className="text-indigo-600 hover:text-indigo-900 mr-2"
+                            className="inline-flex items-center text-indigo-600 hover:text-indigo-900"
+                            title="Edit equipment"
                           >
-                            Edit
+                            <Pencil className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('equipment', eq.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="inline-flex items-center text-red-600 hover:text-red-900"
+                            title="Delete equipment"
                           >
-                            Delete
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </td>
                       </tr>
@@ -572,18 +578,20 @@ function App() {
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {customer.notes}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                           <button
                             onClick={() => setEditingItem({ type: 'customer', data: customer })}
-                            className="text-indigo-600 hover:text-indigo-900 mr-2"
+                            className="inline-flex items-center text-indigo-600 hover:text-indigo-900"
+                            title="Edit customer"
                           >
-                            Edit
+                            <Pencil className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('customer', customer.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="inline-flex items-center text-red-600 hover:text-red-900"
+                            title="Delete customer"
                           >
-                            Delete
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </td>
                       </tr>
@@ -609,6 +617,7 @@ function App() {
               try {
                 let updateData = { ...data };
 
+                // Exclude `customer` and `equipment` if updating a maintenance record
                 if (editingItem.type === 'maintenance') {
                   const { customer, equipments, visits, ...filteredData } = data;
                   updateData = filteredData;
