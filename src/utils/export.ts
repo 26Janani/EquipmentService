@@ -14,6 +14,8 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
       `Visit ${index + 1}: ${visit.date} - ${visit.work} (Attended by: ${visit.attendedBy})`
     ).join('\n');
 
+    const recordStatus = new Date(record.service_end_date) < new Date() ? 'Expired' : 'Active';
+
     return {
       'Customer Name': record.customer.name,
       'Equipment Name': record.equipments.name,
@@ -25,9 +27,11 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
       'Service Status': record.service_status,
       'Service Start Date': format(new Date(record.service_start_date), 'yyyy-MM-dd'),
       'Service End Date': format(new Date(record.service_end_date), 'yyyy-MM-dd'),
+      'Amount': record.amount,
       'Total Visits': record.visits?.length || 0,
       'Visit Details': visitsFormatted,
-      'Notes': record.notes || ''
+      'Notes': record.notes || '',
+      'Record Status': recordStatus,
     };
   });
 }
