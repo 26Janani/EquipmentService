@@ -9,15 +9,8 @@ import { EditModal } from './components/EditModal';
 import { AddModal } from './components/AddModal';
 import { Pagination } from './components/Pagination';
 import { calculateAge } from './utils/age';
-import { exportAllData } from './utils/export';
+import { exportAllData, exportFilteredMaintenanceRecords } from './utils/export';
 import { VisitModal } from './components/VisitModal';
-
-const calculateAgeInMonths = (date: string) => {
-  const installDate = new Date(date);
-  const now = new Date();
-  return (now.getFullYear() - installDate.getFullYear()) * 12 + 
-         (now.getMonth() - installDate.getMonth());
-};
 
 function App() {
   const [equipment, setEquipment] = useState<Equipments[]>([]);
@@ -151,6 +144,26 @@ function App() {
     );
   };
 
+  const handleExport = () => {
+    try {
+      exportAllData(customers, equipment, maintenanceRecords);
+      toast.success('Export successful');
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast.error('Failed to export');
+    }
+  };
+
+  const handleExportFiltered = () => {
+    try {
+      exportFilteredMaintenanceRecords(filteredMaintenanceRecords, filters, customers, equipment);
+      toast.success('Export successful');
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast.error('Failed to export');
+    }
+  };
+
   async function handleDelete(type: string, id: string) {
     if (type === 'equipment' || type === 'customer') {
       const { data: relatedRecords } = await supabase
@@ -183,16 +196,6 @@ function App() {
       toast.error('Failed to delete');
     }
   }
-
-  const handleExport = () => {
-    try {
-      exportAllData(customers, equipment, maintenanceRecords);
-      toast.success('Export successful');
-    } catch (error) {
-      console.error('Error exporting:', error);
-      toast.error('Failed to export');
-    }
-  };
 
   const isRecordExpired = (record: MaintenanceRecord) => {
     const serviceEndDate = new Date(record.service_end_date);
@@ -404,13 +407,22 @@ function App() {
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg leading-6 font-medium text-gray-900">Maintenance Records</h3>
-                  <button
-                    onClick={() => setAddingType('maintenance')}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Add Maintenance
-                  </button>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={handleExportFiltered}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      <Download className="h-5 w-5 mr-2" />
+                      Export Filtered Records
+                    </button>
+                    <button
+                      onClick={() => setAddingType('maintenance')}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <Calendar className="h-5 w-5 mr-2" />
+                      Add Maintenance
+                    </button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -617,7 +629,6 @@ function App() {
                       <tr key={customer.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {customer.name}
-                        
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {customer.bio_medical_email}
