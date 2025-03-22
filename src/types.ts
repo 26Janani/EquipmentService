@@ -38,6 +38,7 @@ export interface MaintenanceRecord {
   service_status: string;
   service_start_date: string;
   service_end_date: string;
+  amount: number;
   notes?: string;
   equipment: Equipments;
   customer: Customer;

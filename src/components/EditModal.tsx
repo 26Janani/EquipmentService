@@ -1,5 +1,6 @@
 import React from 'react';
 import { Customer, Equipment, MaintenanceRecord } from '../types';
+import Select from 'react-select';
 
 interface EditModalProps {
   type: 'customer' | 'equipment' | 'maintenance';
@@ -203,6 +204,19 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
           value={(formData as MaintenanceRecord)?.service_end_date?.split('T')[0] || ''}
           onChange={(e) => setFormData({ ...formData, service_end_date: e.target.value })}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Amount</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={(formData as MaintenanceRecord)?.amount || ''}
+          onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          placeholder="Enter amount"
           required
         />
       </div>
