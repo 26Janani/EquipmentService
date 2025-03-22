@@ -1,4 +1,4 @@
-export interface Equipment {
+export interface Equipments {
   id: string;
   name: string;
   model_number: string;
@@ -29,7 +29,7 @@ export interface MaintenanceRecord {
   service_start_date: string;
   service_end_date: string;
   notes?: string;
-  equipment: Equipment;
+  equipment: Equipments;
   customer: Customer;
   created_at?: string;
   updated_at?: string;

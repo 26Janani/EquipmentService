@@ -3,7 +3,7 @@ import { Plus, Wrench, Bell, Calendar, Settings, Download } from 'lucide-react';
 import { supabase, isAuthenticated, ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/supabase';
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
-import { Customer, Equipment, MaintenanceRecord, MaintenanceFilters, PaginationState } from './types';
+import { Customer, Equipments, MaintenanceRecord, MaintenanceFilters, PaginationState } from './types';
 import { MaintenanceFilters as MaintenanceFiltersComponent } from './components/MaintenanceFilters';
 import { EditModal } from './components/EditModal';
 import { AddModal } from './components/AddModal';
@@ -12,13 +12,13 @@ import { calculateAge } from './utils/age';
 import { exportAllData } from './utils/export';
 
 function App() {
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [equipment, setEquipment] = useState<Equipments[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [filters, setFilters] = useState<MaintenanceFilters>({});
   const [editingItem, setEditingItem] = useState<{
     type: 'customer' | 'equipment' | 'maintenance';
-    data: Customer | Equipment | MaintenanceRecord;
+    data: Customer | Equipments | MaintenanceRecord;
   } | null>(null);
   const [addingType, setAddingType] = useState<'customer' | 'equipment' | 'maintenance' | null>(null);
   const [activeTab, setActiveTab] = useState<'maintenance' | 'equipment' | 'customers'>('maintenance');
@@ -86,11 +86,11 @@ function App() {
   async function fetchData() {
     try {
       const [equipmentRes, customersRes, maintenanceRes] = await Promise.all([
-        supabase.from('equipment').select('*').order('name'),
+        supabase.from('equipments').select('*').order('name'),
         supabase.from('customers').select('*').order('name'),
         supabase.from('maintenance_records').select(`
           *,
-          equipment(*),
+          equipments(*),
           customer:customer_id(*)
         `).order('next_service_date'),
       ]);
@@ -344,10 +344,10 @@ function App() {
                             <div className="text-sm text-gray-500">{record.customer.bio_medical_email}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.equipment.name}
+                            {record.equipments.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {record.equipment.model_number}
+                            {record.equipments.model_number}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {record.serial_no}

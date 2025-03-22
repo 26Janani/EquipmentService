@@ -37,7 +37,7 @@ function prepareCustomerDataForExport(records: Customer[]) {
 }
 
 function calculateAge(installationDate: string): string {
-  const months = differenceInMonths(new Date(), new Date(installationDate));
+  const months = differenceInMonths(new Date(installationDate), new Date());
   const years = Math.floor(months / 12);
   const remainingMonths = months % 12;
 
@@ -48,6 +48,13 @@ function calculateAge(installationDate: string): string {
   return `${years} year${years !== 1 ? 's' : ''} ${
     remainingMonths > 0 ? `${remainingMonths} month${remainingMonths !== 1 ? 's' : ''}` : ''
   }`;
+}
+
+function differenceInMonths(date1: Date, date2: Date): number {
+  const yearsDiff = date2.getFullYear() - date1.getFullYear();
+  const monthsDiff = date2.getMonth() - date1.getMonth();
+
+  return yearsDiff * 12 + monthsDiff;
 }
 
 export function exportAllData(
