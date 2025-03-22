@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Wrench, Bell, Calendar, Settings } from 'lucide-react';
+import { Plus, Wrench, Bell, Calendar, Settings, Download } from 'lucide-react';
 import { supabase, isAuthenticated, ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/supabase';
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
-import { Customer, Equipment, MaintenanceRecord, MaintenanceFilters } from './types';
+import { Customer, Equipment, MaintenanceRecord, MaintenanceFilters, PaginationState } from './types';
 import { MaintenanceFilters as MaintenanceFiltersComponent } from './components/MaintenanceFilters';
 import { EditModal } from './components/EditModal';
+import { AddModal } from './components/AddModal';
+import { Pagination } from './components/Pagination';
 import { calculateAge } from './utils/age';
+import { exportAllData } from './utils/export';
 
 function App() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -17,11 +20,14 @@ function App() {
     type: 'customer' | 'equipment' | 'maintenance';
     data: Customer | Equipment | MaintenanceRecord;
   } | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showEquipmentForm, setShowEquipmentForm] = useState(false);
-  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [addingType, setAddingType] = useState<'customer' | 'equipment' | 'maintenance' | null>(null);
   const [activeTab, setActiveTab] = useState<'maintenance' | 'equipment' | 'customers'>('maintenance');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [pagination, setPagination] = useState<PaginationState>({
+    page: 1,
+    pageSize: 10,
+    total: 0
+  });
 
   useEffect(() => {
     checkAuth();
@@ -41,7 +47,6 @@ function App() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     
-    // Validate against admin credentials
     if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
       toast.error('Invalid credentials. Please use admin credentials.');
       return;
@@ -85,77 +90,45 @@ function App() {
         supabase.from('customers').select('*').order('name'),
         supabase.from('maintenance_records').select(`
           *,
-          equipment:equipment_id(*),
+          equipment(*),
           customer:customer_id(*)
         `).order('next_service_date'),
       ]);
 
       if (equipmentRes.data) setEquipment(equipmentRes.data);
       if (customersRes.data) setCustomers(customersRes.data);
-      if (maintenanceRes.data) setMaintenanceRecords(maintenanceRes.data);
+      if (maintenanceRes.data) {
+        setMaintenanceRecords(maintenanceRes.data);
+        setPagination(prev => ({ ...prev, total: maintenanceRes.data.length }));
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load data');
     }
   }
 
-  async function handleSave(data: any) {
-    try {
-      let error;
-      switch (editingItem?.type) {
-        case 'customer':
-          ({ error } = await supabase
-            .from('customers')
-            .update(data)
-            .eq('id', data.id));
-          break;
-        case 'equipment':
-          ({ error } = await supabase
-            .from('equipment')
-            .update(data)
-            .eq('id', data.id));
-          break;
-        case 'maintenance':
-          ({ error } = await supabase
-            .from('maintenance_records')
-            .update(data)
-            .eq('id', data.id));
-          break;
-      }
-
-      if (error) throw error;
-
-      toast.success('Updated successfully');
-      fetchData();
-    } catch (error) {
-      console.error('Error updating:', error);
-      toast.error('Failed to update');
-    }
-  }
-
   async function handleDelete(type: string, id: string) {
-    try {
-      let error;
-      switch (type) {
-        case 'customer':
-          ({ error } = await supabase
-            .from('customers')
-            .delete()
-            .eq('id', id));
-          break;
-        case 'equipment':
-          ({ error } = await supabase
-            .from('equipment')
-            .delete()
-            .eq('id', id));
-          break;
-        case 'maintenance':
-          ({ error } = await supabase
-            .from('maintenance_records')
-            .delete()
-            .eq('id', id));
-          break;
+    if (type === 'equipment' || type === 'customer') {
+      const { data: relatedRecords } = await supabase
+        .from('maintenance_records')
+        .select('id')
+        .eq(type === 'equipment' ? 'equipment_id' : 'customer_id', id);
+
+      if (relatedRecords && relatedRecords.length > 0) {
+        toast.error(`Cannot delete this ${type}. It has associated maintenance records.`);
+        return;
       }
+    }
+
+    if (!window.confirm(`Are you sure you want to delete this ${type}?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from(type === 'maintenance' ? 'maintenance_records' : `${type}s`)
+        .delete()
+        .eq('id', id);
 
       if (error) throw error;
 
@@ -167,9 +140,19 @@ function App() {
     }
   }
 
+  const handleExport = () => {
+    try {
+      exportAllData(customers, equipment, maintenanceRecords);
+      toast.success('Export successful');
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast.error('Failed to export');
+    }
+  };
+
   const filteredMaintenanceRecords = maintenanceRecords.filter(record => {
-    if (filters.customer_id && record.customer_id !== filters.customer_id) return false;
-    if (filters.equipment_id && record.equipment_id !== filters.equipment_id) return false;
+    if (filters.customer_ids?.length && !filters.customer_ids.includes(record.customer_id)) return false;
+    if (filters.equipment_ids?.length && !filters.equipment_ids.includes(record.equipment_id)) return false;
     if (filters.model_number && !record.equipment.model_number.includes(filters.model_number)) return false;
     
     const installationDate = new Date(record.installation_date);
@@ -186,6 +169,11 @@ function App() {
 
     return true;
   });
+
+  const paginatedRecords = filteredMaintenanceRecords.slice(
+    (pagination.page - 1) * pagination.pageSize,
+    pagination.page * pagination.pageSize
+  );
 
   if (!isLoggedIn) {
     return (
@@ -242,25 +230,32 @@ function App() {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setShowCustomerForm(true)}
+                onClick={() => setAddingType('customer')}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
                 <Plus className="h-5 w-5 mr-2" />
                 Add Customer
               </button>
               <button
-                onClick={() => setShowEquipmentForm(true)}
+                onClick={() => setAddingType('equipment')}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <Settings className="h-5 w-5 mr-2" />
                 Add Equipment
               </button>
               <button
-                onClick={() => setShowAddForm(true)}
+                onClick={() => setAddingType('maintenance')}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Calendar className="h-5 w-5 mr-2" />
                 Add Maintenance
+              </button>
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <Download className="h-5 w-5 mr-2" />
+                Export All
               </button>
               <button
                 onClick={handleLogout}
@@ -321,7 +316,9 @@ function App() {
             />
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Maintenance Records</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Maintenance Records</h3>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -335,11 +332,12 @@ function App() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty End</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredMaintenanceRecords.map((record) => (
+                      {paginatedRecords.map((record) => (
                         <tr key={record.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{record.customer.name}</div>
@@ -363,17 +361,14 @@ function App() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {format(new Date(record.warranty_end_date), 'PP')}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              record.service_status === 'completed' ? 'bg-green-100 text-green-800' :
-                              record.service_status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {record.service_status}
-                            </span>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {record.service_status}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {format(new Date(record.service_start_date), 'PP')} - {format(new Date(record.service_end_date), 'PP')}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {record.notes}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
@@ -394,6 +389,11 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  pagination={pagination}
+                  onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+                  onPageSizeChange={(pageSize) => setPagination(prev => ({ ...prev, pageSize, page: 1 }))}
+                />
               </div>
             </div>
           </>
@@ -402,7 +402,9 @@ function App() {
         {activeTab === 'equipment' && (
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Equipment List</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">Equipment List</h3>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -451,7 +453,9 @@ function App() {
         {activeTab === 'customers' && (
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Customers</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">Customers</h3>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -510,7 +514,33 @@ function App() {
             type={editingItem.type}
             data={editingItem.data}
             onClose={() => setEditingItem(null)}
-            onSave={handleSave}
+            onSave={async (data) => {
+              try {
+                const { error } = await supabase
+                  .from(editingItem.type === 'maintenance' ? 'maintenance_records' : `${editingItem.type}s`)
+                  .update(data)
+                  .eq('id', data.id);
+
+                if (error) throw error;
+
+                toast.success('Updated successfully');
+                fetchData();
+                setEditingItem(null);
+              } catch (error) {
+                console.error('Error updating:', error);
+                toast.error('Failed to update');
+              }
+            }}
+            customers={customers}
+            equipment={equipment}
+          />
+        )}
+
+        {addingType && (
+          <AddModal
+            type={addingType}
+            onClose={() => setAddingType(null)}
+            onSuccess={fetchData}
             customers={customers}
             equipment={equipment}
           />
