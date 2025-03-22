@@ -41,7 +41,7 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
             isMulti
             options={equipment.map(eq => ({
               value: eq.id,
-              label: `${eq.name} - ${eq.model_number}`
+              label: `${eq.name}`
             }))}
             value={filters.equipment_ids?.map(id => ({
               value: id,
@@ -52,17 +52,6 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
               equipment_ids: selected.map(option => option.value)
             })}
             className="mt-1"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Model Number</label>
-          <input
-            type="text"
-            value={filters.model_number || ''}
-            onChange={(e) => onFiltersChange({ ...filters, model_number: e.target.value || undefined })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            placeholder="Search by model number"
           />
         </div>
 
