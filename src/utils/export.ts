@@ -3,19 +3,33 @@ import { Customer, Equipment, MaintenanceRecord } from '../types';
 import { format } from 'date-fns';
 
 function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
-  return records.map(record => ({
-    'Customer Name': record.customer.name,
-    'Equipment Name': record.equipments.name,
-    'Model Number': record.equipments.model_number,
-    'Serial Number': record.serial_no,
-    'Installation Date': format(new Date(record.installation_date), 'yyyy-MM-dd'),
-    'Age': record.installation_date ? calculateAge(record.installation_date) : '',
-    'Warranty End Date': format(new Date(record.warranty_end_date), 'yyyy-MM-dd'),
-    'Service Status': record.service_status,
-    'Service Start Date': format(new Date(record.service_start_date), 'yyyy-MM-dd'),
-    'Service End Date': format(new Date(record.service_end_date), 'yyyy-MM-dd'),
-    'Notes': record.notes || ''
-  }));
+  return records.map(record => {
+    const visitDetails = record.visits?.map(visit => ({
+      date: format(new Date(visit.visit_date), 'yyyy-MM-dd'),
+      work: visit.work_done,
+      attendedBy: visit.attended_by
+    })) || [];
+
+    const visitsFormatted = visitDetails.map((visit, index) => 
+      `Visit ${index + 1}: ${visit.date} - ${visit.work} (Attended by: ${visit.attendedBy})`
+    ).join('\n');
+
+    return {
+      'Customer Name': record.customer.name,
+      'Equipment Name': record.equipments.name,
+      'Model Number': record.equipments.model_number,
+      'Serial Number': record.serial_no,
+      'Installation Date': format(new Date(record.installation_date), 'yyyy-MM-dd'),
+      'Age': calculateAge(record.installation_date),
+      'Warranty End Date': format(new Date(record.warranty_end_date), 'yyyy-MM-dd'),
+      'Service Status': record.service_status,
+      'Service Start Date': format(new Date(record.service_start_date), 'yyyy-MM-dd'),
+      'Service End Date': format(new Date(record.service_end_date), 'yyyy-MM-dd'),
+      'Total Visits': record.visits?.length || 0,
+      'Visit Details': visitsFormatted,
+      'Notes': record.notes || ''
+    };
+  });
 }
 
 function prepareEquipmentDataForExport(records: Equipment[]) {
@@ -37,7 +51,7 @@ function prepareCustomerDataForExport(records: Customer[]) {
 }
 
 function calculateAge(installationDate: string): string {
-  const months = differenceInMonths(new Date(installationDate), new Date());
+  const months = differenceInMonths(new Date(), new Date(installationDate));
   const years = Math.floor(months / 12);
   const remainingMonths = months % 12;
 
@@ -51,8 +65,8 @@ function calculateAge(installationDate: string): string {
 }
 
 function differenceInMonths(date1: Date, date2: Date): number {
-  const yearsDiff = date2.getFullYear() - date1.getFullYear();
-  const monthsDiff = date2.getMonth() - date1.getMonth();
+  const yearsDiff = date1.getFullYear() - date2.getFullYear();
+  const monthsDiff = date1.getMonth() - date2.getMonth();
 
   return yearsDiff * 12 + monthsDiff;
 }
@@ -82,7 +96,11 @@ export function exportAllData(
     const colWidths = headers.map((key) => {
       const maxLength = Math.max(
         key.length, // Column header length
-        ...data.map((row) => (row[key] ? row[key].toString().length : 0)) // Max cell length in column
+        ...data.map((row) => {
+          const cellValue = row[key]?.toString() || '';
+          // For multiline content, get the longest line
+          return Math.max(...cellValue.split('\n').map(line => line.length));
+        })
       );
       return { wch: maxLength + 2 }; // Add padding for better readability
     });
@@ -99,6 +117,22 @@ export function exportAllData(
         sheet[cellRef].s = { font: { bold: true } }; // Apply bold style
       }
     }
+
+    // Set row heights for cells with multiline content
+    const rowHeights: { [key: number]: number } = {};
+    data.forEach((row, idx) => {
+      const rowNum = idx + 2; // Add 2 because row 1 is headers
+      Object.values(row).forEach((value) => {
+        if (typeof value === 'string' && value.includes('\n')) {
+          const lines = value.split('\n').length;
+          rowHeights[rowNum] = Math.max(rowHeights[rowNum] || 15, lines * 15);
+        }
+      });
+    });
+
+    sheet['!rows'] = Object.entries(rowHeights).map(([rowNum, height]) => ({
+      hpt: height // Set custom row height
+    }));
 
     // Append the formatted sheet to the workbook
     XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
