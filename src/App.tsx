@@ -12,6 +12,13 @@ import { calculateAge } from './utils/age';
 import { exportAllData, exportFilteredMaintenanceRecords } from './utils/export';
 import { VisitModal } from './components/VisitModal';
 
+const calculateAgeInMonths = (date: string) => {
+  const installDate = new Date(date);
+  const now = new Date();
+  return (now.getFullYear() - installDate.getFullYear()) * 12 + 
+         (now.getMonth() - installDate.getMonth());
+};
+
 function App() {
   const [equipment, setEquipment] = useState<Equipments[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
