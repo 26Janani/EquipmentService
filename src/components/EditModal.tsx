@@ -173,13 +173,18 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Service Status</label>
-        <input
-          type="text"
-          value={(formData as MaintenanceRecord)?.service_status || ''}
+        <select
+          value={(formData as MaintenanceRecord)?.service_status || 'WARRANTY'}
           onChange={(e) => setFormData({ ...formData, service_status: e.target.value })}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           required
-        />
+          >
+          <option value="WARRANTY">WARRANTY</option>
+          <option value="CAMC">CAMC</option>
+          <option value="AMC">AMC</option>
+          <option value="CALIBRATION">CALIBRATION</option>
+          <option value="ONCALL SERVICE">ONCALL SERVICE</option>
+        </select>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Service Start Date</label>

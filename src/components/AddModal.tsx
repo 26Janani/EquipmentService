@@ -15,6 +15,14 @@ interface AddModalProps {
 export function AddModal({ type, onClose, onSuccess, customers, equipment }: AddModalProps) {
   const [formData, setFormData] = useState<any>({});
 
+  const SERVICE_STATUS_OPTIONS = [
+    { value: 'WARRANTY', label: 'WARRANTY' },
+    { value: 'CAMC', label: 'CAMC' },
+    { value: 'AMC', label: 'AMC' },
+    { value: 'CALIBRATION', label: 'CALIBRATION' },
+    { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' }
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -162,11 +170,10 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Service Status</label>
-        <input
-          type="text"
-          onChange={(e) => setFormData({ ...formData, service_status: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          placeholder="Enter service status"
+        <Select
+          options={SERVICE_STATUS_OPTIONS}
+          onChange={(selected) => setFormData({ ...formData, service_status: selected?.value })}
+          className="mt-1"
           required
         />
       </div>
