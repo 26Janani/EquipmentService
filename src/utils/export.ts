@@ -14,7 +14,15 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
       `Visit ${index + 1}: ${visit.date} - ${visit.work} (Attended by: ${visit.attendedBy})`
     ).join('\n');
 
-    const recordStatus = new Date(record.service_end_date) < new Date() ? 'Expired' : 'Active';
+    // Calculate record status based on service end date
+    const serviceEndDate = new Date(record.service_end_date);
+    const currentDate = new Date();
+    
+    // Reset time parts to midnight for accurate date comparison
+    serviceEndDate.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
+
+    const recordStatus = serviceEndDate >= currentDate ? 'Active' : 'Expired';
 
     return {
       'Customer Name': record.customer.name,

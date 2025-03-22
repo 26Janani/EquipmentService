@@ -195,7 +195,14 @@ function App() {
   };
 
   const isRecordExpired = (record: MaintenanceRecord) => {
-    return new Date(record.service_end_date) <= new Date();
+    const serviceEndDate = new Date(record.service_end_date);
+    const currentDate = new Date();
+    
+    // Reset time parts to midnight for accurate date comparison
+    serviceEndDate.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
+    
+    return serviceEndDate < currentDate;
   };
 
   const paginatedCustomers = customers.slice(
@@ -234,7 +241,7 @@ function App() {
 
     // Record Status filter
     if (filters.record_statuses?.length) {
-      const isExpired = new Date(record.service_end_date) < new Date();
+      const isExpired = isRecordExpired(record);
       const status = isExpired ? 'expired' : 'active';
       if (!filters.record_statuses.includes(status)) return false;
     }
