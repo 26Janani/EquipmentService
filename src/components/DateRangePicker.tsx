@@ -23,6 +23,7 @@ export function DateRangePicker({ startDate, endDate, onChange, label }: DateRan
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           placeholderText="Start Date"
           isClearable
+          dateFormat="dd/MM/yyyy"
         />
         <span className="text-gray-500">to</span>
         <DatePicker
@@ -35,6 +36,7 @@ export function DateRangePicker({ startDate, endDate, onChange, label }: DateRan
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           placeholderText="End Date"
           isClearable
+          dateFormat="dd/MM/yyyy"
         />
       </div>
     </div>

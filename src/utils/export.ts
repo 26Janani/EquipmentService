@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
   return records.map(record => {
     const visitDetails = record.visits?.map(visit => ({
-      date: format(new Date(visit.visit_date), 'yyyy-MM-dd'),
+      date: format(new Date(visit.visit_date), 'dd-MM-yyyy'),
       work: visit.work_done,
       attendedBy: visit.attended_by
     })) || [];
@@ -29,12 +29,12 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
       'Equipment Name': record.equipments.name,
       'Model Number': record.equipments.model_number,
       'Serial Number': record.serial_no,
-      'Installation Date': format(new Date(record.installation_date), 'yyyy-MM-dd'),
+      'Installation Date': format(new Date(record.installation_date), 'dd-MM-yyyy'),
       'Age': calculateAge(record.installation_date),
-      'Warranty End Date': format(new Date(record.warranty_end_date), 'yyyy-MM-dd'),
+      'Warranty End Date': format(new Date(record.warranty_end_date), 'dd-MM-yyyy'),
       'Service Status': record.service_status,
-      'Service Start Date': format(new Date(record.service_start_date), 'yyyy-MM-dd'),
-      'Service End Date': format(new Date(record.service_end_date), 'yyyy-MM-dd'),
+      'Service Start Date': format(new Date(record.service_start_date), 'dd-MM-yyyy'),
+      'Service End Date': format(new Date(record.service_end_date), 'dd-MM-yyyy'),
       'Amount': record.amount,
       'Total Visits': record.visits?.length || 0,
       'Visit Details': visitsFormatted,
@@ -104,7 +104,7 @@ function prepareFiltersDataForExport(
     if (min !== null) ageRange.push(`Min: ${min} years`);
     if (max !== null) ageRange.push(`Max: ${max} years`);
     if (ageRange.length) {
-      filterData.push(['Age Range', ageRange.join(', ')]);
+      filterData.push(['Equipment Age - Years', ageRange.join(', ')]);
     }
   }
 
@@ -118,8 +118,8 @@ function prepareFiltersDataForExport(
 
   dateRanges.forEach(([label, range]) => {
     if (range?.[0] || range?.[1]) {
-      const start = range[0] ? format(range[0], 'yyyy-MM-dd') : 'Any';
-      const end = range[1] ? format(range[1], 'yyyy-MM-dd') : 'Any';
+      const start = range[0] ? format(range[0], 'dd-MM-yyyy') : 'Any';
+      const end = range[1] ? format(range[1], 'dd-MM-yyyy') : 'Any';
       filterData.push([label, `${start} to ${end}`]);
     }
   });
