@@ -26,7 +26,6 @@ const RECORD_STATUS_OPTIONS = [
 
 export function MaintenanceFilters({ filters, onFiltersChange, customers, equipment }: MaintenanceFiltersProps) {
   const handleClearFilters = () => {
-    // Reset all filters to their initial state
     onFiltersChange({});
   };
 
@@ -45,9 +44,9 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow mb-6 space-y-4">
+    <div className="bg-white p-6 rounded-lg shadow mb-6 space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Filters</h3>
+        <h3 className="text-lg font-medium text-gray-900">Filter Records</h3>
         <button
           onClick={handleClearFilters}
           className="inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
@@ -57,9 +56,9 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Customers</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Customers</label>
           <Select
             isMulti
             value={filters.customer_ids?.map(id => ({
@@ -74,13 +73,15 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
               ...filters,
               customer_ids: selected ? selected.map(option => option.value) : undefined
             })}
-            className="mt-1"
+            className="basic-multi-select"
+            classNamePrefix="select"
+            placeholder="Select customers..."
             isClearable
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Equipment</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Equipment</label>
           <Select
             isMulti
             value={filters.equipment_ids?.map(id => ({
@@ -95,13 +96,15 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
               ...filters,
               equipment_ids: selected ? selected.map(option => option.value) : undefined
             })}
-            className="mt-1"
+            className="basic-multi-select"
+            classNamePrefix="select"
+            placeholder="Select equipment..."
             isClearable
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Service Status</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Service Status</label>
           <Select
             isMulti
             value={filters.service_statuses?.map(status => ({
@@ -113,13 +116,15 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
               ...filters,
               service_statuses: selected ? selected.map(option => option.value) : undefined
             })}
-            className="mt-1"
+            className="basic-multi-select"
+            classNamePrefix="select"
+            placeholder="Select service status..."
             isClearable
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Record Status</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Record Status</label>
           <Select
             isMulti
             value={filters.record_statuses?.map(status => ({
@@ -131,13 +136,15 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
               ...filters,
               record_statuses: selected ? selected.map(option => option.value as 'active' | 'expired') : undefined
             })}
-            className="mt-1"
+            className="basic-multi-select"
+            classNamePrefix="select"
+            placeholder="Select record status..."
             isClearable
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Equipment Age - Years</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Equipment Age - Years</label>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="flex space-x-2">
@@ -147,7 +154,7 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
                   placeholder="Min"
                   value={filters.age_range?.years?.min ?? ''}
                   onChange={(e) => handleAgeRangeChange('years', 'min', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
                 <input
                   type="number"
@@ -155,7 +162,7 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
                   placeholder="Max"
                   value={filters.age_range?.years?.max ?? ''}
                   onChange={(e) => handleAgeRangeChange('years', 'max', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
               </div>
             </div>
