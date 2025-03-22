@@ -73,7 +73,7 @@ export function exportAllData(
     const headers = Object.keys(data[0]);
 
     // Convert data to worksheet (excluding headers)
-    const sheet = XLSX.utils.json_to_sheet(data, { skipHeader: true });
+    const sheet = XLSX.utils.json_to_sheet(data);
 
     // Add headers manually at the top (row 1)
     XLSX.utils.sheet_add_aoa(sheet, [headers], { origin: "A1" });
@@ -106,8 +106,8 @@ export function exportAllData(
 
   // Add each dataset as a separate worksheet with formatting
   addSheetWithFormatting(prepareCustomerDataForExport(customers), 'Customers');
-  addSheetWithFormatting(prepareEquipmentDataForExport(equipment), 'Equipment');
-  addSheetWithFormatting(prepareMaintenanceDataForExport(maintenanceRecords), 'Maintenance');
+  addSheetWithFormatting(prepareEquipmentDataForExport(equipment), 'Equipments');
+  addSheetWithFormatting(prepareMaintenanceDataForExport(maintenanceRecords), 'Maintenance Records');
 
   // Generate timestamp
   const timestamp = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
