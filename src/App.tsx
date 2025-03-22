@@ -3,7 +3,7 @@ import { Plus, Wrench, Bell, Calendar, Settings, Download } from 'lucide-react';
 import { supabase, isAuthenticated, ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/supabase';
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
-import { Customer, Equipments, MaintenanceRecord, MaintenanceFilters, PaginationState } from './types';
+import { Customer, Equipments, MaintenanceRecord, MaintenanceFilters, PaginationState, MaintenanceVisit } from './types';
 import { MaintenanceFilters as MaintenanceFiltersComponent } from './components/MaintenanceFilters';
 import { EditModal } from './components/EditModal';
 import { AddModal } from './components/AddModal';
@@ -88,15 +88,19 @@ function App() {
   async function fetchData() {
     try {
       const [equipmentRes, customersRes, maintenanceRes] = await Promise.all([
-        supabase.from('equipments').select('*').order('name'),
-        supabase.from('customers').select('*').order('name'),
+        supabase.from('equipments').select('*').order('created_at'),
+        supabase.from('customers').select('*').order('created_at'),
         supabase.from('maintenance_records').select(`
           *,
           equipments(*),
           customer:customer_id(*),
           visits:maintenance_visits(*)
-        `).order('next_service_date'),
+        `).order('created_at'),
       ]);
+
+      if (equipmentRes.error) throw equipmentRes.error;
+      if (customersRes.error) throw customersRes.error;
+      if (maintenanceRes.error) throw maintenanceRes.error;
 
       if (equipmentRes.data) setEquipment(equipmentRes.data);
       if (customersRes.data) setCustomers(customersRes.data);
@@ -109,6 +113,16 @@ function App() {
       toast.error('Failed to load data');
     }
   }
+
+  const handleVisitChange = (maintenanceId: string, updatedVisits: MaintenanceVisit[]) => {
+    setMaintenanceRecords(records =>
+      records.map(record =>
+        record.id === maintenanceId
+          ? { ...record, visits: updatedVisits }
+          : record
+      )
+    );
+  };
 
   async function handleDelete(type: string, id: string) {
     if (type === 'equipment' || type === 'customer') {
@@ -407,12 +421,12 @@ function App() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg leading-6 font-medium text-gray-900">Equipment List</h3>
                 <button
-                onClick={() => setAddingType('equipment')}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Settings className="h-5 w-5 mr-2" />
-                Add Equipment
-              </button>
+                  onClick={() => setAddingType('equipment')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <Settings className="h-5 w-5 mr-2" />
+                  Add Equipment
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -465,12 +479,12 @@ function App() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg leading-6 font-medium text-gray-900">Customers</h3>
                 <button
-                onClick={() => setAddingType('customer')}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Add Customer
-              </button>
+                  onClick={() => setAddingType('customer')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add Customer
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -575,36 +589,9 @@ function App() {
             maintenanceId={editingVisits.id}
             visits={editingVisits.visits || []}
             onClose={() => setEditingVisits(null)}
-            onSave={async (visits) => {
-              try {
-                // Delete existing visits
-                if (editingVisits.visits?.length) {
-                  await supabase
-                    .from('maintenance_visits')
-                    .delete()
-                    .eq('maintenance_record_id', editingVisits.id);
-                }
-
-                // Insert new visits
-                if (visits.length) {
-                  const { error } = await supabase
-                    .from('maintenance_visits')
-                    .insert(visits);
-
-                  if (error) throw error;
-                }
-
-                toast.success('Visits updated successfully');
-                fetchData();
-                setEditingVisits(null);
-              } catch (error) {
-                console.error('Error updating visits:', error);
-                toast.error('Failed to update visits');
-              }
-            }}
+            onVisitChange={handleVisitChange}
           />
-        )}        
-        
+        )}
       </main>
     </div>
   );

@@ -8,10 +8,10 @@ interface VisitModalProps {
   maintenanceId: string;
   visits: MaintenanceVisit[];
   onClose: () => void;
-  onSave: (visits: MaintenanceVisit[]) => Promise<void>;
+  onVisitChange: (maintenanceId: string, visits: MaintenanceVisit[]) => void;
 }
 
-export function VisitModal({ maintenanceId, visits, onClose }: VisitModalProps) {
+export function VisitModal({ maintenanceId, visits, onClose, onVisitChange }: VisitModalProps) {
   const [visitsList, setVisitsList] = useState<MaintenanceVisit[]>(visits || []);
   const [newVisit, setNewVisit] = useState({
     visit_date: '',
@@ -42,7 +42,9 @@ export function VisitModal({ maintenanceId, visits, onClose }: VisitModalProps) 
 
       if (error) throw error;
 
-      setVisitsList([...visitsList, data]);
+      const updatedVisits = [...visitsList, data];
+      setVisitsList(updatedVisits);
+      onVisitChange(maintenanceId, updatedVisits);
       setNewVisit({ visit_date: '', work_done: '', attended_by: '' });
       toast.success('Visit added successfully');
     } catch (error) {
@@ -64,7 +66,9 @@ export function VisitModal({ maintenanceId, visits, onClose }: VisitModalProps) 
 
       if (error) throw error;
 
-      setVisitsList(visitsList.map(v => v.id === visit.id ? visit : v));
+      const updatedVisits = visitsList.map(v => v.id === visit.id ? visit : v);
+      setVisitsList(updatedVisits);
+      onVisitChange(maintenanceId, updatedVisits);
       setEditingVisit(null);
       toast.success('Visit updated successfully');
     } catch (error) {
@@ -86,7 +90,9 @@ export function VisitModal({ maintenanceId, visits, onClose }: VisitModalProps) 
 
       if (error) throw error;
 
-      setVisitsList(visitsList.filter(visit => visit.id !== visitId));
+      const updatedVisits = visitsList.filter(visit => visit.id !== visitId);
+      setVisitsList(updatedVisits);
+      onVisitChange(maintenanceId, updatedVisits);
       toast.success('Visit deleted successfully');
     } catch (error) {
       console.error('Error deleting visit:', error);
