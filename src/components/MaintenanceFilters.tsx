@@ -70,10 +70,17 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
         />
 
         <DateRangePicker
-          startDate={filters.service_date_range?.[0] || null}
-          endDate={filters.service_date_range?.[1] || null}
-          onChange={(dates) => onFiltersChange({ ...filters, service_date_range: dates })}
-          label="Service Date Range"
+          startDate={filters.service_start_date_range?.[0] || null}
+          endDate={filters.service_start_date_range?.[1] || null}
+          onChange={(dates) => onFiltersChange({ ...filters, service_start_date_range: dates })}
+          label="Service Start Date Range"
+        />
+
+        <DateRangePicker
+          startDate={filters.service_end_date_range?.[0] || null}
+          endDate={filters.service_end_date_range?.[1] || null}
+          onChange={(dates) => onFiltersChange({ ...filters, service_end_date_range: dates })}
+          label="Service End Date Range"
         />
       </div>
     </div>

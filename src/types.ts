@@ -41,7 +41,8 @@ export interface MaintenanceFilters {
   model_number?: string;
   installation_date_range?: [Date | null, Date | null];
   warranty_end_date_range?: [Date | null, Date | null];
-  service_date_range?: [Date | null, Date | null];
+  service_start_date_range?: [Date | null, Date | null];
+  service_end_date_range?: [Date | null, Date | null];
 }
 
 export interface PaginationState {

@@ -164,8 +164,12 @@ function App() {
     if (filters.warranty_end_date_range?.[1] && warrantyEndDate > filters.warranty_end_date_range[1]) return false;
 
     const serviceStartDate = new Date(record.service_start_date);
-    if (filters.service_date_range?.[0] && serviceStartDate < filters.service_date_range[0]) return false;
-    if (filters.service_date_range?.[1] && serviceStartDate > filters.service_date_range[1]) return false;
+    if (filters.service_start_date_range?.[0] && serviceStartDate < filters.service_start_date_range[0]) return false;
+    if (filters.service_start_date_range?.[1] && serviceStartDate > filters.service_start_date_range[1]) return false;
+
+    const serviceEndDate = new Date(record.service_end_date);
+    if (filters.service_end_date_range?.[0] && serviceEndDate < filters.service_end_date_range[0]) return false;
+    if (filters.service_end_date_range?.[1] && serviceEndDate > filters.service_end_date_range[1]) return false;
 
     return true;
   });
