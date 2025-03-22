@@ -195,7 +195,7 @@ function App() {
   };
 
   const isRecordExpired = (record: MaintenanceRecord) => {
-    return new Date(record.service_end_date) < new Date();
+    return new Date(record.service_end_date) <= new Date();
   };
 
   const paginatedCustomers = customers.slice(

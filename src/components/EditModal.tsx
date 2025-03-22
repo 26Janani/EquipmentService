@@ -1,6 +1,7 @@
 import React from 'react';
 import { Customer, Equipment, MaintenanceRecord } from '../types';
 import Select from 'react-select';
+import { X } from 'lucide-react';
 
 interface EditModalProps {
   type: 'customer' | 'equipment' | 'maintenance';
@@ -179,7 +180,7 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
           onChange={(e) => setFormData({ ...formData, service_status: e.target.value })}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           required
-          >
+        >
           <option value="WARRANTY">WARRANTY</option>
           <option value="CAMC">CAMC</option>
           <option value="AMC">AMC</option>
@@ -233,16 +234,29 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
   );
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-      <div className="bg-white rounded-lg p-8 max-w-2xl w-full">
-        <h2 className="text-xl font-semibold mb-4">
-          Edit {type.charAt(0).toUpperCase() + type.slice(1)}
-        </h2>
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start justify-center z-50 overflow-y-auto pt-4 pb-20">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Edit {type.charAt(0).toUpperCase() + type.slice(1)}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit}>
-          {type === 'customer' && renderCustomerForm()}
-          {type === 'equipment' && renderEquipmentForm()}
-          {type === 'maintenance' && renderMaintenanceForm()}
-          <div className="mt-6 flex justify-end space-x-3">
+          <div className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+            {type === 'customer' && renderCustomerForm()}
+            {type === 'equipment' && renderEquipmentForm()}
+            {type === 'maintenance' && renderMaintenanceForm()}
+          </div>
+
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}

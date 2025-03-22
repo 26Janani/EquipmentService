@@ -3,6 +3,7 @@ import { Customer, Equipments, MaintenanceRecord } from '../types';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
+import { X } from 'lucide-react';
 
 interface AddModalProps {
   type: 'customer' | 'equipment' | 'maintenance';
@@ -25,6 +26,22 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate service end date for maintenance records
+    if (type === 'maintenance') {
+      const serviceEndDate = new Date(formData.service_end_date);
+      const currentDate = new Date();
+      
+      // Reset time part for accurate date comparison
+      serviceEndDate.setHours(0, 0, 0, 0);
+      currentDate.setHours(0, 0, 0, 0);
+
+      if (serviceEndDate < currentDate) {
+        toast.error('Service end date cannot be lesser than current date');
+        return;
+      }
+    }
+
     try {
       const { error } = await supabase
         .from(type === 'maintenance' ? 'maintenance_records' : `${type}s`)
@@ -190,10 +207,12 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
         <label className="block text-sm font-medium text-gray-700">Service End Date</label>
         <input
           type="date"
+          max={new Date().toISOString().split('T')[0]}
           onChange={(e) => setFormData({ ...formData, service_end_date: e.target.value })}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           required
         />
+        <p className="mt-1 text-sm text-gray-500">Service end date cannot be lesser than current date</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Amount</label>
@@ -219,16 +238,29 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
   );
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 max-w-2xl w-full">
-        <h2 className="text-xl font-semibold mb-4">
-          Add {type.charAt(0).toUpperCase() + type.slice(1)}
-        </h2>
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start justify-center z-50 overflow-y-auto pt-4 pb-20">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Add {type.charAt(0).toUpperCase() + type.slice(1)}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        
         <form onSubmit={handleSubmit}>
-          {type === 'customer' && renderCustomerForm()}
-          {type === 'equipment' && renderEquipmentForm()}
-          {type === 'maintenance' && renderMaintenanceForm()}
-          <div className="mt-6 flex justify-end space-x-3">
+          <div className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+            {type === 'customer' && renderCustomerForm()}
+            {type === 'equipment' && renderEquipmentForm()}
+            {type === 'maintenance' && renderMaintenanceForm()}
+          </div>
+          
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}
