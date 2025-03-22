@@ -54,6 +54,11 @@ export interface MaintenanceFilters {
   warranty_end_date_range?: [Date | null, Date | null];
   service_start_date_range?: [Date | null, Date | null];
   service_end_date_range?: [Date | null, Date | null];
+  service_statuses?: string[];
+  record_statuses?: ('active' | 'expired')[];
+  age_range?: {
+    years: { min: number | null; max: number | null };
+  };
 }
 
 export interface PaginationState {

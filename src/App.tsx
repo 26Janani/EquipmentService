@@ -12,6 +12,13 @@ import { calculateAge } from './utils/age';
 import { exportAllData } from './utils/export';
 import { VisitModal } from './components/VisitModal';
 
+const calculateAgeInMonths = (date: string) => {
+  const installDate = new Date(date);
+  const now = new Date();
+  return (now.getFullYear() - installDate.getFullYear()) * 12 + 
+         (now.getMonth() - installDate.getMonth());
+};
+
 function App() {
   const [equipment, setEquipment] = useState<Equipments[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -100,14 +107,14 @@ function App() {
   async function fetchData() {
     try {
       const [equipmentRes, customersRes, maintenanceRes] = await Promise.all([
-        supabase.from('equipments').select('*').order('name'),
-        supabase.from('customers').select('*').order('name'),
+        supabase.from('equipments').select('*').order('created_at'),
+        supabase.from('customers').select('*').order('created_at'),
         supabase.from('maintenance_records').select(`
           *,
           equipments(*),
           customer:customer_id(*),
           visits:maintenance_visits(*)
-        `).order('next_service_date'),
+        `).order('created_at'),
       ]);
 
       if (equipmentRes.error) throw equipmentRes.error;
@@ -221,6 +228,40 @@ function App() {
     const serviceEndDate = new Date(record.service_end_date);
     if (filters.service_end_date_range?.[0] && serviceEndDate < filters.service_end_date_range[0]) return false;
     if (filters.service_end_date_range?.[1] && serviceEndDate > filters.service_end_date_range[1]) return false;
+
+    // Service Status filter
+    if (filters.service_statuses?.length && !filters.service_statuses.includes(record.service_status)) return false;
+
+    // Record Status filter
+    if (filters.record_statuses?.length) {
+      const isExpired = new Date(record.service_end_date) < new Date();
+      const status = isExpired ? 'expired' : 'active';
+      if (!filters.record_statuses.includes(status)) return false;
+    }
+
+    // Age filter with exact year boundaries
+    if (filters.age_range?.years) {
+      const ageInMonths = calculateAgeInMonths(record.installation_date);
+      const ageInYears = ageInMonths / 12;
+
+      const { min, max } = filters.age_range.years;
+
+      // When min is set (e.g., min = 1), include all records >= min years
+      if (min !== null && ageInYears < min) return false;
+
+      // When max is set:
+      // For min = 0, max = 1: exclude records >= 1 year (12 months)
+      // For min = 1, max = 3: exclude records > 3 years (36 months)
+      if (max !== null) {
+        if (min === 0) {
+          // When min = 0, strictly exclude anything >= max years
+          if (ageInYears >= max) return false;
+        } else {
+          // When min > 0, exclude anything > max years
+          if (ageInYears > max) return false;
+        }
+      }
+    }
 
     return true;
   });
@@ -565,6 +606,7 @@ function App() {
                       <tr key={customer.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {customer.name}
+                        
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {customer.bio_medical_email}
