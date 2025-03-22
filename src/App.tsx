@@ -277,14 +277,14 @@ function App() {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               <button
-                onClick={() => setActiveTab('maintenance')}
+                onClick={() => setActiveTab('customers')}
                 className={`${
-                  activeTab === 'maintenance'
+                  activeTab === 'customers'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
               >
-                Maintenance Records
+                Customers
               </button>
               <button
                 onClick={() => setActiveTab('equipment')}
@@ -294,17 +294,17 @@ function App() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
               >
-                Equipment List
+                Equipments
               </button>
               <button
-                onClick={() => setActiveTab('customers')}
+                onClick={() => setActiveTab('maintenance')}
                 className={`${
-                  activeTab === 'customers'
+                  activeTab === 'maintenance'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
               >
-                Customers
+                Maintenance Records
               </button>
             </nav>
           </div>

@@ -65,19 +65,53 @@ export function exportAllData(
   // Create a new workbook
   const workbook = XLSX.utils.book_new();
 
-  // Add each dataset as a separate worksheet
-  const customersSheet = XLSX.utils.json_to_sheet(prepareCustomerDataForExport(customers));
-  const equipmentSheet = XLSX.utils.json_to_sheet(prepareEquipmentDataForExport(equipment));
-  const maintenanceSheet = XLSX.utils.json_to_sheet(prepareMaintenanceDataForExport(maintenanceRecords));
+  // Function to create a sheet with bold headers and auto column width
+  const addSheetWithFormatting = (data: any[], sheetName: string) => {
+    if (!data || data.length === 0) return;
 
-  // Add the worksheets to the workbook
-  XLSX.utils.book_append_sheet(workbook, customersSheet, 'Customers');
-  XLSX.utils.book_append_sheet(workbook, equipmentSheet, 'Equipment');
-  XLSX.utils.book_append_sheet(workbook, maintenanceSheet, 'Maintenance');
+    // Extract headers from the data keys
+    const headers = Object.keys(data[0]);
+
+    // Convert data to worksheet (excluding headers)
+    const sheet = XLSX.utils.json_to_sheet(data, { skipHeader: true });
+
+    // Add headers manually at the top (row 1)
+    XLSX.utils.sheet_add_aoa(sheet, [headers], { origin: "A1" });
+
+    // Calculate column widths dynamically
+    const colWidths = headers.map((key) => {
+      const maxLength = Math.max(
+        key.length, // Column header length
+        ...data.map((row) => (row[key] ? row[key].toString().length : 0)) // Max cell length in column
+      );
+      return { wch: maxLength + 2 }; // Add padding for better readability
+    });
+
+    sheet['!cols'] = colWidths; // Apply column widths
+
+    // Apply bold styling to headers
+    if (!sheet['!ref']) return; // Ensure the sheet reference exists
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: col }); // Get header cell reference (row 0)
+      if (sheet[cellRef]) {
+        sheet[cellRef].s = { font: { bold: true } }; // Apply bold style
+      }
+    }
+
+    // Append the formatted sheet to the workbook
+    XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+  };
+
+  // Add each dataset as a separate worksheet with formatting
+  addSheetWithFormatting(prepareCustomerDataForExport(customers), 'Customers');
+  addSheetWithFormatting(prepareEquipmentDataForExport(equipment), 'Equipment');
+  addSheetWithFormatting(prepareMaintenanceDataForExport(maintenanceRecords), 'Maintenance');
 
   // Generate timestamp
   const timestamp = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
-  
+
   // Write the workbook to a file
   XLSX.writeFile(workbook, `Exported_Data_${timestamp}.xlsx`);
 }
