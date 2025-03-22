@@ -88,14 +88,14 @@ function App() {
   async function fetchData() {
     try {
       const [equipmentRes, customersRes, maintenanceRes] = await Promise.all([
-        supabase.from('equipments').select('*').order('created_at'),
-        supabase.from('customers').select('*').order('created_at'),
+        supabase.from('equipments').select('*').order('name'),
+        supabase.from('customers').select('*').order('name'),
         supabase.from('maintenance_records').select(`
           *,
           equipments(*),
           customer:customer_id(*),
           visits:maintenance_visits(*)
-        `).order('created_at'),
+        `).order('next_service_date'),
       ]);
 
       if (equipmentRes.error) throw equipmentRes.error;
@@ -165,6 +165,10 @@ function App() {
       console.error('Error exporting:', error);
       toast.error('Failed to export');
     }
+  };
+
+  const isRecordExpired = (record: MaintenanceRecord) => {
+    return new Date(record.service_end_date) < new Date();
   };
 
   const filteredMaintenanceRecords = maintenanceRecords.filter(record => {
@@ -337,71 +341,84 @@ function App() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Date</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty End</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {paginatedRecords.map((record) => (
-                        <tr key={record.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{record.customer.name}</div>
-                            <div className="text-sm text-gray-500">{record.customer.bio_medical_email}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.equipments.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {record.equipments.model_number}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {record.serial_no}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {format(new Date(record.installation_date), 'PP')}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {calculateAge(record.installation_date)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {format(new Date(record.warranty_end_date), 'PP')}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {record.service_status}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {format(new Date(record.service_start_date), 'PP')} - {format(new Date(record.service_end_date), 'PP')}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <button
-                              onClick={() => setEditingVisits(record)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              {record.visits?.length || 0} visits
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {record.notes}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => setEditingItem({ type: 'maintenance', data: record })}
-                              className="text-indigo-600 hover:text-indigo-900 mr-2"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete('maintenance', record.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {paginatedRecords.map((record) => {
+                        const expired = isRecordExpired(record);
+                        return (
+                          <tr key={record.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{record.customer.name}</div>
+                              <div className="text-sm text-gray-500">{record.customer.bio_medical_email}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {record.equipments.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {record.equipments.model_number}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {record.serial_no}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {format(new Date(record.installation_date), 'PP')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {calculateAge(record.installation_date)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {format(new Date(record.warranty_end_date), 'PP')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {record.service_status}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {format(new Date(record.service_start_date), 'PP')} - {format(new Date(record.service_end_date), 'PP')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                              }`}>
+                                {expired ? 'Expired' : 'Active'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <button
+                                onClick={() => setEditingVisits(record)}
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                {record.visits?.length || 0} visits
+                              </button>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {record.notes}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button
+                                onClick={() => !expired && setEditingItem({ type: 'maintenance', data: record })}
+                                className={`text-indigo-600 hover:text-indigo-900 mr-2 ${expired ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title={expired ? 'Cannot edit expired records' : undefined}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => !expired && handleDelete('maintenance', record.id)}
+                                className={`text-red-600 hover:text-red-900 ${expired ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title={expired ? 'Cannot delete expired records' : undefined}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -590,6 +607,7 @@ function App() {
             visits={editingVisits.visits || []}
             onClose={() => setEditingVisits(null)}
             onVisitChange={handleVisitChange}
+            isExpired={isRecordExpired(editingVisits)}
           />
         )}
       </main>
