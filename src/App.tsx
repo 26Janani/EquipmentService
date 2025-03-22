@@ -31,6 +31,18 @@ function App() {
   });
   const [editingVisits, setEditingVisits] = useState<MaintenanceRecord | null>(null);
 
+  const [customersPagination, setCustomersPagination] = useState<PaginationState>({
+    page: 1,
+    pageSize: 10,
+    total: 0
+  });
+
+  const [equipmentPagination, setEquipmentPagination] = useState<PaginationState>({
+    page: 1,
+    pageSize: 10,
+    total: 0
+  });
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -102,8 +114,16 @@ function App() {
       if (customersRes.error) throw customersRes.error;
       if (maintenanceRes.error) throw maintenanceRes.error;
 
-      if (equipmentRes.data) setEquipment(equipmentRes.data);
-      if (customersRes.data) setCustomers(customersRes.data);
+      if (equipmentRes.data) {
+        setEquipment(equipmentRes.data);
+        setEquipmentPagination(prev => ({ ...prev, total: equipmentRes.data.length }));
+      }
+      
+      if (customersRes.data) {
+        setCustomers(customersRes.data);
+        setCustomersPagination(prev => ({ ...prev, total: customersRes.data.length }));
+      }
+      
       if (maintenanceRes.data) {
         setMaintenanceRecords(maintenanceRes.data);
         setPagination(prev => ({ ...prev, total: maintenanceRes.data.length }));
@@ -171,6 +191,16 @@ function App() {
     return new Date(record.service_end_date) < new Date();
   };
 
+  const paginatedCustomers = customers.slice(
+    (customersPagination.page - 1) * customersPagination.pageSize,
+    customersPagination.page * customersPagination.pageSize
+  );
+
+  const paginatedEquipment = equipment.slice(
+    (equipmentPagination.page - 1) * equipmentPagination.pageSize,
+    equipmentPagination.page * equipmentPagination.pageSize
+  );
+
   const filteredMaintenanceRecords = maintenanceRecords.filter(record => {
     if (filters.customer_ids?.length && !filters.customer_ids.includes(record.customer_id)) return false;
     if (filters.equipment_ids?.length && !filters.equipment_ids.includes(record.equipment_id)) return false;
@@ -194,6 +224,10 @@ function App() {
 
     return true;
   });
+
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, total: filteredMaintenanceRecords.length, page: 1 }));
+  }, [filters]);
 
   const paginatedRecords = filteredMaintenanceRecords.slice(
     (pagination.page - 1) * pagination.pageSize,
@@ -421,12 +455,12 @@ function App() {
                       })}
                     </tbody>
                   </table>
+                  <Pagination
+                    pagination={pagination}
+                    onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+                    onPageSizeChange={(pageSize) => setPagination(prev => ({ ...prev, pageSize, page: 1 }))}
+                  />
                 </div>
-                <Pagination
-                  pagination={pagination}
-                  onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
-                  onPageSizeChange={(pageSize) => setPagination(prev => ({ ...prev, pageSize, page: 1 }))}
-                />
               </div>
             </div>
           </>
@@ -456,7 +490,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {equipment.map((eq) => (
+                    {paginatedEquipment.map((eq) => (
                       <tr key={eq.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {eq.name}
@@ -485,6 +519,11 @@ function App() {
                     ))}
                   </tbody>
                 </table>
+                <Pagination
+                  pagination={equipmentPagination}
+                  onPageChange={(page) => setEquipmentPagination(prev => ({ ...prev, page }))}
+                  onPageSizeChange={(pageSize) => setEquipmentPagination(prev => ({ ...prev, pageSize, page: 1 }))}
+                />
               </div>
             </div>
           </div>
@@ -516,7 +555,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {customers.map((customer) => (
+                    {paginatedCustomers.map((customer) => (
                       <tr key={customer.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {customer.name}
@@ -551,6 +590,11 @@ function App() {
                     ))}
                   </tbody>
                 </table>
+                <Pagination
+                  pagination={customersPagination}
+                  onPageChange={(page) => setCustomersPagination(prev => ({ ...prev, page }))}
+                  onPageSizeChange={(pageSize) => setCustomersPagination(prev => ({ ...prev, pageSize, page: 1 }))}
+                />
               </div>
             </div>
           </div>
@@ -565,7 +609,6 @@ function App() {
               try {
                 let updateData = { ...data };
 
-                // Exclude `customer` and `equipment` if updating a maintenance record
                 if (editingItem.type === 'maintenance') {
                   const { customer, equipments, visits, ...filteredData } = data;
                   updateData = filteredData;
