@@ -324,24 +324,6 @@ function App() {
       <nav className="flex flex-col h-[calc(100vh-4rem)] px-2 no-scrollbar">
         <div className="flex-1 space-y-2 py-4">
           <button
-            onClick={() => setActiveTab('maintenance')}
-            className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
-              ${activeTab === 'maintenance' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
-          >
-            <Calendar className="h-5 w-5" />
-            {(isSidebarOpen || isHoveringNav) && <span>Maintenance</span>}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('equipment')}
-            className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
-              ${activeTab === 'equipment' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
-          >
-            <Wrench className="h-5 w-5" />
-            {(isSidebarOpen || isHoveringNav) && <span>Equipment</span>}
-          </button>
-
-          <button
             onClick={() => setActiveTab('customers')}
             className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
               ${activeTab === 'customers' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
@@ -351,11 +333,29 @@ function App() {
           </button>
 
           <button
+            onClick={() => setActiveTab('equipment')}
+            className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
+              ${activeTab === 'equipment' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
+          >
+            <Wrench className="h-5 w-5" />
+            {(isSidebarOpen || isHoveringNav) && <span>Equipments</span>}
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('maintenance')}
+            className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
+              ${activeTab === 'maintenance' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
+          >
+            <Calendar className="h-5 w-5" />
+            {(isSidebarOpen || isHoveringNav) && <span>Maintenance</span>}
+          </button>
+
+          <button
             onClick={handleExport}
             className="w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200 hover:bg-gray-800"
           >
             <Download className="h-5 w-5" />
-            {(isSidebarOpen || isHoveringNav) && <span>Export All</span>}
+            {(isSidebarOpen || isHoveringNav) && <span>Export Data</span>}
           </button>
         </div>
 
