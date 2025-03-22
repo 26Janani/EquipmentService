@@ -516,10 +516,18 @@ function App() {
             onClose={() => setEditingItem(null)}
             onSave={async (data) => {
               try {
+                let updateData = { ...data };
+
+                // Exclude `customer` and `equipment` if updating a maintenance record
+                if (editingItem.type === 'maintenance') {
+                  const { customer, equipments, ...filteredData } = data;
+                  updateData = filteredData;
+                }
+
                 const { error } = await supabase
                   .from(editingItem.type === 'maintenance' ? 'maintenance_records' : `${editingItem.type}s`)
-                  .update(data)
-                  .eq('id', data.id);
+                  .update(updateData)
+                  .eq('id', updateData.id);
 
                 if (error) throw error;
 

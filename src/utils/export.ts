@@ -5,8 +5,8 @@ import { format } from 'date-fns';
 function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
   return records.map(record => ({
     'Customer Name': record.customer.name,
-    'Equipment Name': record.equipment.name,
-    'Model Number': record.equipment.model_number,
+    'Equipment Name': record.equipments.name,
+    'Model Number': record.equipments.model_number,
     'Serial Number': record.serial_no,
     'Installation Date': format(new Date(record.installation_date), 'yyyy-MM-dd'),
     'Age': record.installation_date ? calculateAge(record.installation_date) : '',
