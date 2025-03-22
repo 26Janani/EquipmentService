@@ -10,6 +10,7 @@ import { AddModal } from './components/AddModal';
 import { Pagination } from './components/Pagination';
 import { calculateAge } from './utils/age';
 import { exportAllData } from './utils/export';
+import { VisitModal } from './components/VisitModal';
 
 function App() {
   const [equipment, setEquipment] = useState<Equipments[]>([]);
@@ -28,6 +29,7 @@ function App() {
     pageSize: 10,
     total: 0
   });
+  const [editingVisits, setEditingVisits] = useState<MaintenanceRecord | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -91,7 +93,8 @@ function App() {
         supabase.from('maintenance_records').select(`
           *,
           equipments(*),
-          customer:customer_id(*)
+          customer:customer_id(*),
+          visits:maintenance_visits(*)
         `).order('next_service_date'),
       ]);
 
@@ -302,12 +305,12 @@ function App() {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg leading-6 font-medium text-gray-900">Maintenance Records</h3>
                   <button
-                onClick={() => setAddingType('maintenance')}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Calendar className="h-5 w-5 mr-2" />
-                Add Maintenance
-              </button>
+                    onClick={() => setAddingType('maintenance')}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <Calendar className="h-5 w-5 mr-2" />
+                    Add Maintenance
+                  </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -322,6 +325,7 @@ function App() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty End</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
@@ -356,6 +360,14 @@ function App() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {format(new Date(record.service_start_date), 'PP')} - {format(new Date(record.service_end_date), 'PP')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button
+                              onClick={() => setEditingVisits(record)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              {record.visits?.length || 0} visits
+                            </button>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {record.notes}
@@ -557,6 +569,42 @@ function App() {
             equipment={equipment}
           />
         )}
+
+        {editingVisits && (
+          <VisitModal
+            maintenanceId={editingVisits.id}
+            visits={editingVisits.visits || []}
+            onClose={() => setEditingVisits(null)}
+            onSave={async (visits) => {
+              try {
+                // Delete existing visits
+                if (editingVisits.visits?.length) {
+                  await supabase
+                    .from('maintenance_visits')
+                    .delete()
+                    .eq('maintenance_record_id', editingVisits.id);
+                }
+
+                // Insert new visits
+                if (visits.length) {
+                  const { error } = await supabase
+                    .from('maintenance_visits')
+                    .insert(visits);
+
+                  if (error) throw error;
+                }
+
+                toast.success('Visits updated successfully');
+                fetchData();
+                setEditingVisits(null);
+              } catch (error) {
+                console.error('Error updating visits:', error);
+                toast.error('Failed to update visits');
+              }
+            }}
+          />
+        )}        
+        
       </main>
     </div>
   );

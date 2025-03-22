@@ -18,6 +18,16 @@ export interface Customer {
   updated_at?: string;
 }
 
+export interface MaintenanceVisit {
+  id: string;
+  maintenance_record_id: string;
+  visit_date: string;
+  work_done: string;
+  attended_by: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface MaintenanceRecord {
   id: string;
   equipment_id: string;
@@ -31,6 +41,7 @@ export interface MaintenanceRecord {
   notes?: string;
   equipment: Equipments;
   customer: Customer;
+  visits?: MaintenanceVisit[];
   created_at?: string;
   updated_at?: string;
 }
