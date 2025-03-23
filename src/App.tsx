@@ -252,21 +252,78 @@ function App() {
           if (!serialNumbers.includes(record.serial_no)) return false;
         }
     
-    const installationDate = new Date(record.installation_date);
-    if (filters.installation_date_range?.[0] && installationDate < filters.installation_date_range[0]) return false;
-    if (filters.installation_date_range?.[1] && installationDate > filters.installation_date_range[1]) return false;
+    // Installation date filter
+    if (filters.installation_date_range?.[0] || filters.installation_date_range?.[1]) {
+      const installationDate = new Date(record.installation_date);
+      installationDate.setHours(0, 0, 0, 0);
 
-    const warrantyEndDate = new Date(record.warranty_end_date);
-    if (filters.warranty_end_date_range?.[0] && warrantyEndDate < filters.warranty_end_date_range[0]) return false;
-    if (filters.warranty_end_date_range?.[1] && warrantyEndDate > filters.warranty_end_date_range[1]) return false;
+      if (filters.installation_date_range[0]) {
+        const startDate = new Date(filters.installation_date_range[0]);
+        startDate.setHours(0, 0, 0, 0);
+        if (installationDate < startDate) return false;
+      }
 
-    const serviceStartDate = new Date(record.service_start_date);
-    if (filters.service_start_date_range?.[0] && serviceStartDate < filters.service_start_date_range[0]) return false;
-    if (filters.service_start_date_range?.[1] && serviceStartDate > filters.service_start_date_range[1]) return false;
+      if (filters.installation_date_range[1]) {
+        const endDate = new Date(filters.installation_date_range[1]);
+        endDate.setHours(23, 59, 59, 999);
+        if (installationDate > endDate) return false;
+      }
+    }
 
-    const serviceEndDate = new Date(record.service_end_date);
-    if (filters.service_end_date_range?.[0] && serviceEndDate < filters.service_end_date_range[0]) return false;
-    if (filters.service_end_date_range?.[1] && serviceEndDate > filters.service_end_date_range[1]) return false;
+    // Warranty end date filter
+    if (filters.warranty_end_date_range?.[0] || filters.warranty_end_date_range?.[1]) {
+      const warrantyEndDate = new Date(record.warranty_end_date);
+      warrantyEndDate.setHours(0, 0, 0, 0);
+
+      if (filters.warranty_end_date_range[0]) {
+        const startDate = new Date(filters.warranty_end_date_range[0]);
+        startDate.setHours(0, 0, 0, 0);
+        if (warrantyEndDate < startDate) return false;
+      }
+
+      if (filters.warranty_end_date_range[1]) {
+        const endDate = new Date(filters.warranty_end_date_range[1]);
+        endDate.setHours(23, 59, 59, 999);
+        if (warrantyEndDate > endDate) return false;
+      }
+    }
+
+    // Service start date filter
+    if (filters.service_start_date_range?.[0] || filters.service_start_date_range?.[1]) {
+      const serviceStartDate = new Date(record.service_start_date);
+      serviceStartDate.setHours(0, 0, 0, 0);
+
+      if (filters.service_start_date_range[0]) {
+        const startDate = new Date(filters.service_start_date_range[0]);
+        startDate.setHours(0, 0, 0, 0);
+        if (serviceStartDate < startDate) return false;
+      }
+
+      if (filters.service_start_date_range[1]) {
+        const endDate = new Date(filters.service_start_date_range[1]);
+        endDate.setHours(23, 59, 59, 999);
+        if (serviceStartDate > endDate) return false;
+      }
+    }
+
+    // Service end date filter
+    if (filters.service_end_date_range?.[0] || filters.service_end_date_range?.[1]) {
+      const serviceEndDate = new Date(record.service_end_date);
+      serviceEndDate.setHours(0, 0, 0, 0);
+
+      if (filters.service_end_date_range[0]) {
+        const startDate = new Date(filters.service_end_date_range[0]);
+        startDate.setHours(0, 0, 0, 0);
+        if (serviceEndDate < startDate) return false;
+      }
+
+      if (filters.service_end_date_range[1]) {
+        const endDate = new Date(filters.service_end_date_range[1]);
+        endDate.setHours(23, 59, 59, 999);
+        if (serviceEndDate > endDate) return false;
+      }
+    }
+
 
     if (filters.service_statuses?.length && !filters.service_statuses.includes(record.service_status)) return false;
 
