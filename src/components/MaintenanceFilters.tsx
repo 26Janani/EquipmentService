@@ -71,7 +71,7 @@ export function MaintenanceFilters({
   return (
     <div className="bg-white p-6 rounded-lg shadow mb-6 space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Filter Records</h3>
+        <h3 className="text-lg font-medium text-gray-900">Filters</h3>
         <button
           onClick={handleClearFilters}
           className="inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
