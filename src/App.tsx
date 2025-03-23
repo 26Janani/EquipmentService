@@ -239,7 +239,18 @@ function App() {
   const filteredMaintenanceRecords = maintenanceRecords.filter(record => {
     if (filters.customer_ids?.length && !filters.customer_ids.includes(record.customer_id)) return false;
     if (filters.equipment_ids?.length && !filters.equipment_ids.includes(record.equipment_id)) return false;
-    if (filters.model_number && !record.equipment.model_number.includes(filters.model_number)) return false;
+
+        // Model number filter
+        if (filters.model_number) {
+          const modelNumbers = filters.model_number.split(',');
+          if (!modelNumbers.includes(record.equipments.model_number)) return false;
+        }
+    
+        // Serial number filter
+        if (filters.serial_no) {
+          const serialNumbers = filters.serial_no.split(',');
+          if (!serialNumbers.includes(record.serial_no)) return false;
+        }
     
     const installationDate = new Date(record.installation_date);
     if (filters.installation_date_range?.[0] && installationDate < filters.installation_date_range[0]) return false;
@@ -473,6 +484,7 @@ function App() {
                     onFiltersChange={setFilters}
                     customers={customers}
                     equipment={equipment}
+                    maintenanceRecords={maintenanceRecords}
                   />
                 </div>
                 <div className="bg-white shadow rounded-lg overflow-hidden">

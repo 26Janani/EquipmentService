@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Customer, Equipment, MaintenanceFilters as MaintenanceFiltersType } from '../types';
+import type { Customer, Equipment, MaintenanceRecord, MaintenanceFilters as MaintenanceFiltersType } from '../types';
 import { DateRangePicker } from './DateRangePicker';
 import Select from 'react-select';
 import { X } from 'lucide-react';
@@ -9,6 +9,7 @@ interface MaintenanceFiltersProps {
   onFiltersChange: (filters: MaintenanceFiltersType) => void;
   customers: Customer[];
   equipment: Equipment[];
+  maintenanceRecords: MaintenanceRecord[];
 }
 
 const SERVICE_STATUS_OPTIONS = [
@@ -24,7 +25,31 @@ const RECORD_STATUS_OPTIONS = [
   { value: 'expired', label: 'Expired' }
 ];
 
-export function MaintenanceFilters({ filters, onFiltersChange, customers, equipment }: MaintenanceFiltersProps) {
+export function MaintenanceFilters({ 
+  filters, 
+  onFiltersChange, 
+  customers = [], 
+  equipment = [], 
+  maintenanceRecords = [] 
+}: MaintenanceFiltersProps) {
+  // Get unique model numbers from equipment
+  const modelNumberOptions = React.useMemo(() => {
+    const uniqueModels = [...new Set(equipment.map(eq => eq.model_number))];
+    return uniqueModels.map(model => ({
+      value: model,
+      label: model
+    }));
+  }, [equipment]);
+
+  // Get unique serial numbers from maintenance records
+  const serialNumberOptions = React.useMemo(() => {
+    const uniqueSerials = [...new Set(maintenanceRecords.map(record => record.serial_no))];
+    return uniqueSerials.map(serial => ({
+      value: serial,
+      label: serial
+    }));
+  }, [maintenanceRecords]);
+
   const handleClearFilters = () => {
     onFiltersChange({});
   };
@@ -99,6 +124,46 @@ export function MaintenanceFilters({ filters, onFiltersChange, customers, equipm
             className="basic-multi-select"
             classNamePrefix="select"
             placeholder="Select equipment..."
+            isClearable
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Model Number</label>
+          <Select
+            isMulti
+            value={filters.model_number?.split(',').map(model => ({
+              value: model,
+              label: model
+            })) || null}
+            options={modelNumberOptions}
+            onChange={(selected) => onFiltersChange({
+              ...filters,
+              model_number: selected ? selected.map(option => option.value).join(',') : undefined
+            })}
+            className="basic-multi-select"
+            classNamePrefix="select"
+            placeholder="Select model numbers..."
+            isClearable
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
+          <Select
+            isMulti
+            value={filters.serial_no?.split(',').map(serial => ({
+              value: serial,
+              label: serial
+            })) || null}
+            options={serialNumberOptions}
+            onChange={(selected) => onFiltersChange({
+              ...filters,
+              serial_no: selected ? selected.map(option => option.value).join(',') : undefined
+            })}
+            className="basic-multi-select"
+            classNamePrefix="select"
+            placeholder="Select serial numbers..."
             isClearable
           />
         </div>

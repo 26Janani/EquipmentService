@@ -51,6 +51,7 @@ export interface MaintenanceFilters {
   customer_ids?: string[];
   equipment_ids?: string[];
   model_number?: string;
+  serial_no?: string;
   installation_date_range?: [Date | null, Date | null];
   warranty_end_date_range?: [Date | null, Date | null];
   service_start_date_range?: [Date | null, Date | null];

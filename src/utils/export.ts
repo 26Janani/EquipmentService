@@ -87,6 +87,16 @@ function prepareFiltersDataForExport(
     filterData.push(['Equipment', equipmentNames]);
   }
 
+  // Model Number filter
+  if (filters.model_number) {
+    filterData.push(['Model Numbers', filters.model_number]);
+  }
+
+  // Serial Number filter
+  if (filters.serial_no) {
+    filterData.push(['Serial Numbers', filters.serial_no]);
+  }
+
   // Service Status filter
   if (filters.service_statuses?.length) {
     filterData.push(['Service Status', filters.service_statuses.join(', ')]);
