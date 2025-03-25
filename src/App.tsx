@@ -204,11 +204,7 @@ function App() {
 
   const handleExport = () => {
     try {
-      if (activeTab === 'maintenance' && Object.keys(filters).length > 0) {
-        exportFilteredMaintenanceRecords(filteredMaintenanceRecords, filters, customers, equipment);
-      } else {
-        exportAllData(customers, equipment, maintenanceRecords);
-      }
+      exportAllData(customers, equipment, maintenanceRecords);
       toast.success('Export successful');
     } catch (error) {
       console.error('Error exporting:', error);
