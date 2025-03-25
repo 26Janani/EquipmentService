@@ -129,7 +129,7 @@ export function MaintenanceFilters({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Model Number</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Product Code</label>
           <Select
             isMulti
             value={filters.model_number?.split(',').map(model => ({
@@ -143,7 +143,7 @@ export function MaintenanceFilters({
             })}
             className="basic-multi-select"
             classNamePrefix="select"
-            placeholder="Select model numbers..."
+            placeholder="Select product codes..."
             isClearable
           />
         </div>

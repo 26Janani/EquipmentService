@@ -27,7 +27,7 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
     return {
       'Customer Name': record.customer.name,
       'Equipment Name': record.equipments.name,
-      'Model Number': record.equipments.model_number,
+      'Product Code': record.equipments.model_number,
       'Serial Number': record.serial_no,
       'Installation Date': format(new Date(record.installation_date), 'dd-MM-yyyy'),
       'Age': calculateAge(record.installation_date),
@@ -35,7 +35,9 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
       'Service Status': record.service_status,
       'Service Start Date': format(new Date(record.service_start_date), 'dd-MM-yyyy'),
       'Service End Date': format(new Date(record.service_end_date), 'dd-MM-yyyy'),
-      'Amount': record.amount,
+      'Invoice Number': record.invoice_number,
+      'Invoice Date': format(new Date(record.invoice_date), 'dd-MM-yyyy'),
+      'Invoice Amount': record.amount,
       'Total Visits': record.visits?.length || 0,
       'Visit Details': visitsFormatted,
       'Notes': record.notes || '',
@@ -47,7 +49,7 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
 function prepareEquipmentDataForExport(records: Equipment[]) {
   return records.map(record => ({
     'Name': record.name,
-    'Model Number': record.model_number,
+    'Product Code': record.model_number,
     'Notes': record.notes || ''
   }));
 }
@@ -89,7 +91,7 @@ function prepareFiltersDataForExport(
 
   // Model Number filter
   if (filters.model_number) {
-    filterData.push(['Model Numbers', filters.model_number]);
+    filterData.push(['Product Codes', filters.model_number]);
   }
 
   // Serial Number filter
