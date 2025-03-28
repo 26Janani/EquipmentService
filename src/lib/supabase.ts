@@ -7,12 +7,34 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Create Supabase client with session handling configuration
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    // Set session timeout to 8 hours (in seconds)
+    storageKey: 'supabase.auth.token',
+    storage: window.localStorage
+  }
+});
 
 // Helper function to check if user is authenticated
 export const isAuthenticated = async () => {
   const { data: { session } } = await supabase.auth.getSession();
   return !!session;
+};
+
+// Helper function to check session expiry
+export const isSessionExpired = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return true;
+  
+  const expiresAt = session.expires_at;
+  if (!expiresAt) return true;
+  
+  // Check if current time is past expiry
+  return Date.now() / 1000 >= expiresAt;
 };
 
 // Admin credentials

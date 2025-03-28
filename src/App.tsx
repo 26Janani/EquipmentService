@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, Wrench, Calendar, Download, Pencil, Trash2, Eye, 
   Menu, X, LogOut, ChevronDown, ChevronUp, Filter, ChevronLeft
 } from 'lucide-react';
-import { supabase, isAuthenticated, ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/supabase';
+import { supabase, isAuthenticated, ADMIN_EMAIL, ADMIN_PASSWORD, isSessionExpired } from './lib/supabase';
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
 import { Customer, Equipments, MaintenanceRecord, MaintenanceFilters, PaginationState, MaintenanceVisit } from './types';
@@ -68,6 +68,38 @@ function App() {
     }
   };
 
+    // Add new state for session monitoring
+    const [isCheckingSession, setIsCheckingSession] = useState(false);
+
+    // Add session expiry handler
+     const handleSessionExpiry = useCallback(async () => {
+       const expired = await isSessionExpired();
+       if (expired && isLoggedIn) {
+         setIsLoggedIn(false);
+         setEquipment([]);
+         setCustomers([]);
+         setMaintenanceRecords([]);
+         toast.error('Session expired. Please log in again.');
+       }
+     }, [isLoggedIn]);
+    
+    // Add session monitoring effect
+     useEffect(() => {
+       const checkSession = async () => {
+         if (isCheckingSession) return;
+         setIsCheckingSession(true);
+         try {
+           await handleSessionExpiry();
+         } finally {
+           setIsCheckingSession(false);
+         }
+       };
+    
+       checkSession();
+       const intervalId = setInterval(checkSession, 60000);
+       return () => clearInterval(intervalId);
+     }, [handleSessionExpiry, isCheckingSession]);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -124,6 +156,13 @@ function App() {
 
   async function fetchData() {
     try {
+      const expired = await isSessionExpired();
+      if (expired) {
+        setIsLoggedIn(false);
+        toast.error('Session expired. Please log in again.');
+        return;
+      }
+
       const [equipmentRes, customersRes, maintenanceRes] = await Promise.all([
         supabase.from('equipments').select('*').order('created_at'),
         supabase.from('customers').select('*').order('created_at'),
@@ -155,7 +194,12 @@ function App() {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load data');
+     if (error.message?.includes('JWT expired') || error.message?.includes('invalid token')) {
+       setIsLoggedIn(false);
+       toast.error('Session expired. Please log in again.');
+     } else {
+        toast.error('Failed to load data');
+     }
     }
   }
 
@@ -170,6 +214,13 @@ function App() {
   };
 
   async function handleDelete(type: string, id: string) {
+    const expired = await isSessionExpired();
+    if (expired) {
+      setIsLoggedIn(false);
+      toast.error('Session expired. Please log in again.');
+      return;
+    }
+
     if (type === 'equipment' || type === 'customer') {
       const { data: relatedRecords } = await supabase
         .from('maintenance_records')
