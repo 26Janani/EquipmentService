@@ -34,13 +34,13 @@ jobs:
       - name: Debug directory structure
         run: ls -R
 
-      # - name: Check installed packages 1
-      #   run: ls -la node_modules/nodemailer
+      - name: Debug Timezone
+        run: date
 
       - name: Install nodemailer manually
         run: npm install nodemailer
 
-      - name: Check installed packages 2
+      - name: Check installed packages
         run: ls -la node_modules/nodemailer
 
       - name: Run Email Scheduler
