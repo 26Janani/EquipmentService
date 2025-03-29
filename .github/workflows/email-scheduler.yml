@@ -1,0 +1,33 @@
+name: Scheduled Email Job
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Runs daily at 9 AM UTC (Adjust timezone in script if needed)
+  workflow_dispatch:  # Allows manual triggering
+      inputs:
+      branch:
+        description: 'Branch to run this workflow on'
+        required: true
+        default: 'main'  # Default to main branch
+        type: string
+
+jobs:
+  send_email:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}  # Use the selected branch
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # Use your Node.js version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Email Scheduler
+        run: node src/utils/emailService.js
