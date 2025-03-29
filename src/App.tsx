@@ -653,13 +653,15 @@ function App() {
                                   {record.service_status}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {format(new Date(record.service_start_date), 'PP')} - {format(new Date(record.service_end_date), 'PP')}
+                                   {record.service_start_date && record.service_end_date 
+                                   ? `${format(new Date(record.service_start_date), 'PP')} - ${format(new Date(record.service_end_date), 'PP')}`
+                                   : ''}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {record.invoice_number}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {format(new Date(record.invoice_date), 'PP')}
+                                  {record.invoice_date ? format(new Date(record.invoice_date), 'PP') : ''}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {record.amount}
@@ -880,7 +882,6 @@ function App() {
 
               if (error) throw error;
 
-              toast.success('Updated successfully');
               fetchData();
               setEditingItem(null);
             } catch (error) {

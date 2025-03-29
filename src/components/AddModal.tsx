@@ -51,10 +51,10 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
         const today = new Date().toISOString().split('T')[0];
         dataToSubmit = {
           ...dataToSubmit,
-          service_start_date: today,
-          service_end_date: today,
+          service_start_date: null,
+          service_end_date: null,
           invoice_number: 'N/A',
-          invoice_date: today,
+          invoice_date: null,
           amount: 0
         };
       }

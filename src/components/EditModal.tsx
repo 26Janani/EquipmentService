@@ -42,10 +42,10 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
           const today = new Date().toISOString().split('T')[0];
           updateData = {
             ...updateData,
-            service_start_date: today,
-            service_end_date: today,
+            service_start_date: null,
+            service_end_date: null,
             invoice_number: 'N/A',
-            invoice_date: today,
+            invoice_date: null,
             amount: 0
           };
         }
