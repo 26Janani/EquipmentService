@@ -29,5 +29,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Debug directory structure
+        run: ls -R
+
       - name: Run Email Scheduler
         run: node src/utils/emailService.js
