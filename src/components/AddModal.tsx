@@ -29,9 +29,10 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
     e.preventDefault();
 
     // Validate service end date for maintenance records
-    if (type === 'maintenance' && selectedServiceStatus !== 'ONCALL SERVICE') {
+    if (type === 'maintenance') {
       const serviceEndDate = new Date(formData.service_end_date);
       const currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() - 1)
       
       // Reset time part for accurate date comparison
       serviceEndDate.setHours(0, 0, 0, 0);
@@ -51,8 +52,6 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
         const today = new Date().toISOString().split('T')[0];
         dataToSubmit = {
           ...dataToSubmit,
-          service_start_date: null,
-          service_end_date: null,
           invoice_number: 'N/A',
           invoice_date: null,
           amount: 0
@@ -213,10 +212,7 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
           required
         />
       </div>
-
-      {selectedServiceStatus !== 'ONCALL SERVICE' && (
-        <>
-          <div>
+      <div>
             <label className="block text-sm font-medium text-gray-700">Service Start Date</label>
             <input
               type="date"
@@ -235,6 +231,9 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
             />
             <p className="mt-1 text-sm text-gray-500">Service end date must be greater than or equal to current date</p>
           </div>
+
+      {selectedServiceStatus !== 'ONCALL SERVICE' && (
+        <>
           <div>
             <label className="block text-sm font-medium text-gray-700">Invoice Number</label>
             <input

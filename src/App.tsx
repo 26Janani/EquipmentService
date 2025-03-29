@@ -266,6 +266,7 @@ function App() {
   const isRecordExpired = (record: MaintenanceRecord) => {
     const serviceEndDate = new Date(record.service_end_date);
     const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() - 1)
     
     serviceEndDate.setHours(0, 0, 0, 0);
     currentDate.setHours(0, 0, 0, 0);

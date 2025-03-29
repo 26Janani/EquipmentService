@@ -17,6 +17,7 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
     // Calculate record status based on service end date
     const serviceEndDate = new Date(record.service_end_date);
     const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() - 1)
     
     // Reset time parts to midnight for accurate date comparison
     serviceEndDate.setHours(0, 0, 0, 0);
