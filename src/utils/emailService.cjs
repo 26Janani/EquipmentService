@@ -24,19 +24,32 @@ const transporter = nodemailer.createTransport({
 
 async function fetchMaintenanceRecords() {
     try {
+        const today = new Date();
+        
+        // Calculate target dates
+        const targetDates = [12, 22, 32].map(days => {
+            const date = new Date(today);
+            date.setDate(today.getDate() + days);
+            return date.toISOString().split('T')[0]; // Convert to YYYY-MM-DD
+        });
+
+        console.log("Fetching records for dates:", targetDates); // Debugging
+
+        // Query records matching any of the target dates
         const { data, error } = await supabase
-            .from('customers') // Replace with your table name
+            .from('maintenance_records')
             .select('*')
-            //.gte('service_end_date', new Date().toISOString().split('T')[0]); // Filter based on date
+            .in('service_end_date', targetDates); // Filtering for 10, 20, 30 days ahead
 
         if (error) throw error;
+
+        console.log("✅ Fetched Maintenance Records:", data);
         return data;
     } catch (error) {
-        console.error("Error fetching records:", error);
+        console.error("❌ Error fetching records:", error);
         return [];
     }
 }
-
 function formatRecordsAsTable(records) {
     if (records.length === 0) return '<p>No upcoming renewals.</p>';
 
@@ -51,9 +64,9 @@ function formatRecordsAsTable(records) {
     records.forEach(record => {
         table += `
             <tr>
-                <td>${record.name}</td>
-                <td>${record.bio_medical_hod_name}</td>
-                <td>${record.notes}</td>
+                <td>${record.customer_id}</td>
+                <td>${record.equipment_id}</td>
+                <td>${record.service_end_date}</td>
             </tr>`;
     });
 
@@ -78,8 +91,8 @@ async function sendEmail(to, subject, htmlContent) {
 async function processAndSendEmails() {
     const records = await fetchMaintenanceRecords();
     const groupedByCompany = records.reduce((acc, record) => {
-        acc[record.company_name] = acc[record.company_name] || [];
-        acc[record.company_name].push(record);
+        acc[record.customer_id] = acc[record.customer_id] || [];
+        acc[record.customer_id].push(record);
         return acc;
     }, {});
 
@@ -91,7 +104,7 @@ async function processAndSendEmails() {
             <p>Kind Regards,<br/>Janani</p>
         `;
         
-        await sendEmail('jananisrinivasan11@gmail.com', `Reminder: Renewals for ${company}`, emailContent);
+        //await sendEmail('jananisrinivasan11@gmail.com', `Reminder: Renewals for ${company}`, emailContent);
     }
 }
 
