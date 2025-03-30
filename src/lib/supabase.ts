@@ -38,5 +38,5 @@ export const isSessionExpired = async () => {
 };
 
 // Admin credentials
-export const ADMIN_EMAIL = 'janani@gmail.com';
-export const ADMIN_PASSWORD = 'janani';
+export const ADMIN_EMAIL = import.meta.env.ADMIN_EMAIL;
+export const ADMIN_PASSWORD = import.meta.env.ADMIN_PASSWORD;
