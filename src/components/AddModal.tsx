@@ -15,6 +15,7 @@ interface AddModalProps {
 
 export function AddModal({ type, onClose, onSuccess, customers, equipment }: AddModalProps) {
   const [formData, setFormData] = useState<any>({});
+  const [selectedServiceStatus, setSelectedServiceStatus] = useState<string>('');
 
   const SERVICE_STATUS_OPTIONS = [
     { value: 'WARRANTY', label: 'WARRANTY' },
@@ -31,6 +32,7 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
     if (type === 'maintenance') {
       const serviceEndDate = new Date(formData.service_end_date);
       const currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() - 1)
       
       // Reset time part for accurate date comparison
       serviceEndDate.setHours(0, 0, 0, 0);
@@ -43,9 +45,22 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
     }
 
     try {
+
+      // For ONCALL SERVICE, set default values for service dates and invoice details
+      let dataToSubmit = { ...formData };
+      if (type === 'maintenance' && selectedServiceStatus === 'ONCALL SERVICE') {
+        const today = new Date().toISOString().split('T')[0];
+        dataToSubmit = {
+          ...dataToSubmit,
+          invoice_number: 'N/A',
+          invoice_date: null,
+          amount: 0
+        };
+      }
+
       const { error } = await supabase
         .from(type === 'maintenance' ? 'maintenance_records' : `${type}s`)
-        .insert([formData]);
+        .insert([dataToSubmit]);
 
       if (error) throw error;
 
@@ -189,60 +204,68 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
         <label className="block text-sm font-medium text-gray-700">Service Status</label>
         <Select
           options={SERVICE_STATUS_OPTIONS}
-          onChange={(selected) => setFormData({ ...formData, service_status: selected?.value })}
+          onChange={(selected) => {
+            setSelectedServiceStatus(selected?.value || '');
+            setFormData({ ...formData, service_status: selected?.value });
+          }}
           className="mt-1"
           required
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Service Start Date</label>
-        <input
-          type="date"
-          onChange={(e) => setFormData({ ...formData, service_start_date: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Service End Date</label>
-        <input
-          type="date"
-          onChange={(e) => setFormData({ ...formData, service_end_date: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          required
-        />
-        <p className="mt-1 text-sm text-gray-500">Service end date must be greater than or equal to current date</p>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Invoice Number</label>
-        <input
-          type="text"
-          onChange={(e) => setFormData({ ...formData, invoice_number: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Invoice Date</label>
-        <input
-          type="date"
-          onChange={(e) => setFormData({ ...formData, invoice_date: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Invoice Amount</label>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          placeholder="Enter Invoice amount"
-          required
-        />
-      </div>
+            <label className="block text-sm font-medium text-gray-700">Service Start Date</label>
+            <input
+              type="date"
+              onChange={(e) => setFormData({ ...formData, service_start_date: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Service End Date</label>
+            <input
+              type="date"
+              onChange={(e) => setFormData({ ...formData, service_end_date: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              required
+            />
+            <p className="mt-1 text-sm text-gray-500">Service end date must be greater than or equal to current date</p>
+          </div>
+
+      {selectedServiceStatus !== 'ONCALL SERVICE' && (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Invoice Number</label>
+            <input
+              type="text"
+              onChange={(e) => setFormData({ ...formData, invoice_number: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Invoice Date</label>
+            <input
+              type="date"
+              onChange={(e) => setFormData({ ...formData, invoice_date: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Invoice Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              placeholder="Enter Invoice amount"
+              required
+            />
+          </div>
+        </>
+      )}
       <div>
         <label className="block text-sm font-medium text-gray-700">Notes</label>
         <textarea
