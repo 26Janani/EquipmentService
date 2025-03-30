@@ -25,31 +25,47 @@ const transporter = nodemailer.createTransport({
 async function fetchMaintenanceRecords() {
     try {
         const today = new Date();
-        
-        // Calculate target dates
-        const targetDates = [12, 22, 32].map(days => {
+        const targetDates = [10, 20, 30].map(days => {
             const date = new Date(today);
             date.setDate(today.getDate() + days);
             return date.toISOString().split('T')[0]; // Convert to YYYY-MM-DD
         });
 
-        console.log("Fetching records for dates:", targetDates); // Debugging
+        console.log("Target Dates :"+targetDates);
 
-        // Query records matching any of the target dates
-        const { data, error } = await supabase
+        // Step 1: Fetch unique customer_ids with service_end_date in 10, 20, 30 days
+        const { data: customerData, error: customerError } = await supabase
+            .from('maintenance_records')
+            .select('customer_id')
+            .in('service_end_date', targetDates);
+
+        if (customerError) throw customerError;
+
+        // Extract unique customer IDs
+        const customerIds = [...new Set(customerData.map(record => record.customer_id))];
+
+        if (customerIds.length === 0) {
+            console.log("No customers found for the given date range.");
+            return [];
+        }
+
+        // Step 2: Fetch all maintenance records for these customer IDs within 10-30 days
+        const { data: maintenanceRecords, error: maintenanceError } = await supabase
             .from('maintenance_records')
             .select('*')
-            .in('service_end_date', targetDates); // Filtering for 10, 20, 30 days ahead
+            .in('customer_id', customerIds)
+            .gte('service_end_date', targetDates[0]) // Start from the earliest target date (10 days)
+            .lte('service_end_date', targetDates[2]); // End at the latest target date (30 days)
 
-        if (error) throw error;
+        if (maintenanceError) throw maintenanceError;
 
-        console.log("✅ Fetched Maintenance Records:", data);
-        return data;
+        return maintenanceRecords;
     } catch (error) {
-        console.error("❌ Error fetching records:", error);
+        console.error("Error fetching records:", error);
         return [];
     }
 }
+
 
 function formatRecordsAsTable(records, isForCompany) {
     if (records.length === 0) return '<p>No upcoming renewals.</p>';
@@ -75,7 +91,7 @@ function formatRecordsAsTable(records, isForCompany) {
                 <td style="border: 1px solid #ddd; padding: 10px;">${record.serial_no}</td>
                 <td style="border: 1px solid #ddd; padding: 10px;">${record.service_status}</td>
                 <td style="border: 1px solid #ddd; padding: 10px;">${record.service_end_date}</td>
-                <td style="border: 1px solid #ddd; padding: 10px;">${record.days_pending} days</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">${record.days_pending} day${record.days_pending === 1 || record.days_pending === 0 ? '' : 's'}</td>
             </tr>`;
     });
 
@@ -115,6 +131,7 @@ async function processAndSendEmails() {
             company: company,
             customer_name: record.customer_name,
             equipment_name: record.equipment_name,
+            hod_name: record.bio_medical_hod_name,
             serial_no: record.serial_no,
             service_end_date: record.service_end_date,
             service_status: record.service_status,
@@ -122,35 +139,41 @@ async function processAndSendEmails() {
         })));
     }
 
-    // Generate consolidated email content
-    const consolidatedEmailContent = `
-        <p>Dear Administrator,</p>
-        <p>Please find below an overview of all customers with upcoming maintenance renewals.</p>
-        ${formatRecordsAsTable(allRecords, true)}
-        <p>Regards,<br/>Janani</p>
-    `;
-
-    console.log("📧 Consolidated Email Content:", consolidatedEmailContent);
-    await sendEmail('jananisrinivasan11@gmail.com', `Automated Reminder: Upcoming Maintenance Renewals Summary`, consolidatedEmailContent);
-    
-    
-
-
-    for (const [company, records] of Object.entries(groupedByCustomer)) {
-        const emailContent = `
-            <p>Dear Customer,</p>
-            <p>Please find below the list of maintenance contracts due for renewal.</p>
-            ${formatRecordsAsTable(records, false)}
-            <p>To ensure uninterrupted service and optimal performance, please schedule your renewal at the earliest convenience.</p>
-            <p>If you have any questions or need assistance, feel free to contact us.</p>
-            <p>Regards,<br/>Alpic Diagnostics</p>
+    if (allRecords.length > 0) {
+       // Generate consolidated email content
+       const consolidatedEmailContent = `
+           <p>Dear Administrator,</p>
+           <p>Please find below an overview of all the customers with upcoming maintenance renewals.</p>
+           ${formatRecordsAsTable(allRecords, true)}
+           <p>Regards,<br/>Alpic Diagnostics</p>
         `;
-        
-        console.log('Email content for customer'+emailContent);
-        await sendEmail('jananisrinivasan11@gmail.com', `[URGENT] Upcoming Maintenance Renewal for Your Equipment`, emailContent);
+
+       console.log("📧 Consolidated Email Content:", consolidatedEmailContent);
+       await sendEmail('jananisrinivasan11@gmail.com', `Automated Reminder: Upcoming Maintenance Renewals Summary`, consolidatedEmailContent);
+    }else {
+        console.log("❌ No records found. Skipping sending email to company.");
     }
 
-    
+    if (Object.keys(groupedByCustomer).length === 0) {
+        console.log("❌ No maintenance renewals found for customers. Skipping sending emails to customers.");
+    } else {
+        for (const [company, records] of Object.entries(groupedByCustomer)) {
+            const hodName = records.length > 0 ? records[0].hod_name : "Customer";
+            const customerName = records.length > 0 ? records[0].customer_name : "Customer"; // Get customer name from first record
+            const emailContent = `
+                <p>Dear ${hodName},</p>
+                <p>To keep your equipment running smoothly and avoid unexpected breakdowns, we remind you to renew/enter into an Annual Maintenance Contract (AMC) or Comprehensive AMC. Ensure optimal performance and uninterrupted service throughout the year.</p>
+                <p> Please find the details below for ${customerName}.</p>
+                ${formatRecordsAsTable(records, false)}
+                <p>For renewal or more details, please contact us at [Contact Information].</p>
+                <p>Regards,<br/>Alpic Diagnostics</p>
+            `;
+
+
+            console.log(`Email sent for customer: ${customerName}`+emailContent);
+            await sendEmail('jananisrinivasan11@gmail.com', `Ensure Trouble-Free Performance – Renew Your AMC Today!`, emailContent);
+        }
+    }    
 }
 
 async function fetchMaintenanceRecordsWithDetails() {
@@ -160,7 +183,7 @@ async function fetchMaintenanceRecordsWithDetails() {
         // Fetch all customer names
         const { data: customers, error: customersError } = await supabase
             .from('customers')
-            .select('id, name');
+            .select('id, name, bio_medical_hod_name');
 
         if (customersError) throw customersError;
 
@@ -172,13 +195,14 @@ async function fetchMaintenanceRecordsWithDetails() {
         if (equipmentsError) throw equipmentsError;
 
         // Convert customers & equipments into lookup objects for faster mapping
-        const customerMap = Object.fromEntries(customers.map(c => [c.id, c.name]));
+        const customerMap = Object.fromEntries(customers.map(c => [c.id, { name: c.name, hod_name: c.bio_medical_hod_name }]));
         const equipmentMap = Object.fromEntries(equipments.map(e => [e.id, e.name]));
 
         // Replace customer_id & equipment_id with names
         const updatedRecords = records.map(record => ({
-            customer_name: customerMap[record.customer_id] || "Unknown Customer",
+            customer_name: customerMap[record.customer_id]?.name || "Unknown Customer",
             equipment_name: equipmentMap[record.equipment_id] || "Unknown Equipment",
+            hod_name: customerMap[record.customer_id]?.hod_name,
             days_pending: calculateDaysLeft(record.service_end_date),
             service_end_date: formatDate(record.service_end_date),
             serial_no: record.serial_no,
