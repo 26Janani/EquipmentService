@@ -1,24 +1,17 @@
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 
-// Supabase configuration
-// const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-// const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const SUPABASE_URL = 'https://qfqqeobtlycwwppaynur.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmcXFlb2J0bHljd3dwcGF5bnVyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjEwNTAzOSwiZXhwIjoyMDU3NjgxMDM5fQ.dcXcydSSHS3tUM7cNIWjvR0n2b2CLNg9v4ZeSv0zgWo';
-
-console.log("url",SUPABASE_URL);
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        // user: process.env.EMAIL_USER,
-        // pass: process.env.EMAIL_PASS  // Use App Password for security
-        user: 'subaarjun10@gmail.com',
-        pass: 'htnk vany apef tkyx'
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASSWORD  // Use App Password for security
     }
 });
 
