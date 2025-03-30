@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
 async function fetchMaintenanceRecords() {
     try {
         const today = new Date();
-        const targetDates = [10, 20, 30].map(days => {
+        const targetDates = [1, 11, 21].map(days => {
             const date = new Date(today);
             date.setDate(today.getDate() + days);
             return date.toISOString().split('T')[0]; // Convert to YYYY-MM-DD
