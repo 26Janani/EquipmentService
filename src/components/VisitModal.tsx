@@ -22,6 +22,15 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
   });
   const [editingVisit, setEditingVisit] = useState<MaintenanceVisit | null>(null);
 
+  const isVisitInPast = (visitDate: string) => {
+    const visit = new Date(visitDate);
+    const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() - 1)
+    visit.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
+    return visit < currentDate;
+  };
+
   const handleAddVisit = async () => {
     if (isExpired) {
       toast.error('Cannot add visits to expired records');
@@ -30,6 +39,17 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
 
     if (!newVisit.visit_date || !newVisit.work_done || !newVisit.attended_by) {
       toast.error('Please fill in all fields');
+      return;
+    }
+
+    const visitDate = new Date(newVisit.visit_date);
+    const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() - 1)
+    currentDate.setHours(0, 0, 0, 0);
+    visitDate.setHours(0, 0, 0, 0);
+
+    if (visitDate < currentDate) {
+      toast.error('Visit date cannot be in the past');
       return;
     }
 
@@ -63,6 +83,17 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
   const handleEditVisit = async (visit: MaintenanceVisit) => {
     if (isExpired) {
       toast.error('Cannot edit visits of expired records');
+      return;
+    }
+
+    const visitDate = new Date(visit.visit_date);
+    const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() - 1)
+    currentDate.setHours(0, 0, 0, 0);
+    visitDate.setHours(0, 0, 0, 0);
+
+    if (visitDate < currentDate) {
+      toast.error('Visit date cannot be in the past');
       return;
     }
 
@@ -151,6 +182,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                   value={newVisit.visit_date}
                   onChange={(e) => setNewVisit({ ...newVisit, visit_date: e.target.value })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  min={new Date().toISOString().split('T')[0]}
                 />
               </div>
               <div>
@@ -212,6 +244,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                               visit_date: new Date(e.target.value).toISOString()
                             })}
                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            min={new Date().toISOString().split('T')[0]}
                           />
                         </td>
                         <td className="px-6 py-4">
@@ -263,16 +296,26 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                         {!isExpired && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                             <button
-                              onClick={() => setEditingVisit(visit)}
-                              className="inline-flex items-center text-indigo-600 hover:text-indigo-900"
-                              title="Edit visit"
+                              onClick={() => !isVisitInPast(visit.visit_date) && setEditingVisit(visit)}
+                              className={`inline-flex items-center ${
+                                isVisitInPast(visit.visit_date) 
+                                  ? 'opacity-50 cursor-not-allowed text-gray-400' 
+                                  : 'text-indigo-600 hover:text-indigo-900'
+                              }`}
+                              title={isVisitInPast(visit.visit_date) ? 'Cannot edit past visits' : 'Edit visit'}
+                              disabled={isVisitInPast(visit.visit_date)}
                             >
                               <Pencil className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => handleRemoveVisit(visit.id)}
-                              className="inline-flex items-center text-red-600 hover:text-red-900"
-                              title="Delete visit"
+                              onClick={() => !isVisitInPast(visit.visit_date) && handleRemoveVisit(visit.id)}
+                              className={`inline-flex items-center ${
+                                isVisitInPast(visit.visit_date)
+                                  ? 'opacity-50 cursor-not-allowed text-gray-400'
+                                  : 'text-red-600 hover:text-red-900'
+                              }`}
+                              title={isVisitInPast(visit.visit_date) ? 'Cannot delete past visits' : 'Delete visit'}
+                              disabled={isVisitInPast(visit.visit_date)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>

@@ -266,6 +266,7 @@ function App() {
   const isRecordExpired = (record: MaintenanceRecord) => {
     const serviceEndDate = new Date(record.service_end_date);
     const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() - 1)
     
     serviceEndDate.setHours(0, 0, 0, 0);
     currentDate.setHours(0, 0, 0, 0);
@@ -618,8 +619,8 @@ function App() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Amount</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
@@ -653,13 +654,15 @@ function App() {
                                   {record.service_status}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {format(new Date(record.service_start_date), 'PP')} - {format(new Date(record.service_end_date), 'PP')}
+                                   {record.service_start_date && record.service_end_date 
+                                   ? `${format(new Date(record.service_start_date), 'PP')} - ${format(new Date(record.service_end_date), 'PP')}`
+                                   : ''}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {record.invoice_number}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {format(new Date(record.invoice_date), 'PP')}
+                                  {record.invoice_date ? format(new Date(record.invoice_date), 'PP') : ''}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {record.amount}
@@ -674,15 +677,15 @@ function App() {
                                     <span>{record.visits?.length || 0} visits</span>
                                   </button>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-500">
-                                  {record.notes}
-                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                                   }`}>
                                     {expired ? 'Expired' : 'Active'}
                                   </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {record.notes}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                                   <button
@@ -880,7 +883,6 @@ function App() {
 
               if (error) throw error;
 
-              toast.success('Updated successfully');
               fetchData();
               setEditingItem(null);
             } catch (error) {
