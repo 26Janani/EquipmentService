@@ -1,26 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Users, Wrench, Calendar, Download, Pencil, Trash2, Eye, 
-  Menu, X, LogOut, ChevronDown, ChevronUp, Filter, ChevronLeft
+  Users, Wrench, Calendar, Download, Filter, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
-import { supabase, isAuthenticated, ADMIN_EMAIL, ADMIN_PASSWORD, isSessionExpired } from './lib/supabase';
-import { format } from 'date-fns';
+import { isSessionExpired } from './lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import { Customer, Equipments, MaintenanceRecord, MaintenanceFilters, PaginationState, MaintenanceVisit } from './types';
 import { MaintenanceFilters as MaintenanceFiltersComponent } from './components/MaintenanceFilters';
 import { EditModal } from './components/EditModal';
 import { AddModal } from './components/AddModal';
-import { Pagination } from './components/Pagination';
-import { calculateAge } from './utils/age';
-import { exportAllData, exportFilteredMaintenanceRecords } from './utils/export';
 import { VisitModal } from './components/VisitModal';
-
-const calculateAgeInMonths = (date: string) => {
-  const installDate = new Date(date);
-  const now = new Date();
-  return (now.getFullYear() - installDate.getFullYear()) * 12 + 
-         (now.getMonth() - installDate.getMonth());
-};
+import { Sidebar } from './components/Sidebar';
+import { CustomerList } from './features/customers/CustomerList';
+import { updateCustomer, deleteCustomer } from './features/customers/customerService';
+import { EquipmentList } from './features/equipment/EquipmentList';
+import { updateEquipment, deleteEquipment } from './features/equipment/equipmentService';
+import { MaintenanceList } from './features/maintenance/MaintenanceList';
+import { 
+  updateMaintenance, 
+  deleteMaintenance
+} from './features/maintenance/maintenanceService';
+import { filterMaintenanceRecords, isRecordExpired } from './features/maintenance/maintenanceFilters';
+import { exportAllData, exportFilteredMaintenanceRecords } from './utils/export';
+import { handleLogin, handleLogout, fetchData, checkAuthentication } from './features/auth/authService';
 
 function App() {
   const [equipment, setEquipment] = useState<Equipments[]>([]);
@@ -68,140 +69,81 @@ function App() {
     }
   };
 
-    // Add new state for session monitoring
-    const [isCheckingSession, setIsCheckingSession] = useState(false);
+  // Add session monitoring effect
+  const [isCheckingSession, setIsCheckingSession] = useState(false);
 
-    // Add session expiry handler
-     const handleSessionExpiry = useCallback(async () => {
-       const expired = await isSessionExpired();
-       if (expired && isLoggedIn) {
-         setIsLoggedIn(false);
-         setEquipment([]);
-         setCustomers([]);
-         setMaintenanceRecords([]);
-         toast.error('Session expired. Please log in again.');
-       }
-     }, [isLoggedIn]);
-    
-    // Add session monitoring effect
-     useEffect(() => {
-       const checkSession = async () => {
-         if (isCheckingSession) return;
-         setIsCheckingSession(true);
-         try {
-           await handleSessionExpiry();
-         } finally {
-           setIsCheckingSession(false);
-         }
-       };
-    
-       checkSession();
-       const intervalId = setInterval(checkSession, 60000);
-       return () => clearInterval(intervalId);
-     }, [handleSessionExpiry, isCheckingSession]);
+  // Add session expiry handler
+  const handleSessionExpiry = useCallback(async () => {
+    const expired = await isSessionExpired();
+    if (expired && isLoggedIn) {
+      setIsLoggedIn(false);
+      setEquipment([]);
+      setCustomers([]);
+      setMaintenanceRecords([]);
+      toast.error('Session expired. Please log in again.');
+    }
+  }, [isLoggedIn]);
+
+  // Add session monitoring effect
+  useEffect(() => {
+    const checkSession = async () => {
+      if (isCheckingSession) return;
+      setIsCheckingSession(true);
+      try {
+        await handleSessionExpiry();
+      } finally {
+        setIsCheckingSession(false);
+      }
+    };
+
+    checkSession();
+    const intervalId = setInterval(checkSession, 60000);
+    return () => clearInterval(intervalId);
+  }, [handleSessionExpiry, isCheckingSession]);
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   async function checkAuth() {
-    const authenticated = await isAuthenticated();
+    const authenticated = await checkAuthentication();
     setIsLoggedIn(authenticated);
     if (authenticated) {
-      fetchData();
+      loadData();
     }
   }
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+  async function loadData() {
+    const data = await fetchData();
+    if (data) {
+      setEquipment(data.equipment);
+      setCustomers(data.customers);
+      setMaintenanceRecords(data.maintenanceRecords);
+      setEquipmentPagination(prev => ({ ...prev, total: data.equipmentPagination.total }));
+      setCustomersPagination(prev => ({ ...prev, total: data.customersPagination.total }));
+      setPagination(prev => ({ ...prev, total: data.maintenancePagination.total }));
+    }
+  }
+
+  const onLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    
-    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-      toast.error('Invalid credentials. Please use admin credentials.');
-      return;
-    }
-    
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
+    const result = await handleLogin(formData);
+    if (result.success) {
       setIsLoggedIn(true);
-      fetchData();
-      toast.success('Logged in successfully');
-    } catch (error) {
-      console.error('Error logging in:', error);
-      toast.error('Failed to log in. Please try again.');
+      loadData();
     }
-  }
+  };
 
-  async function handleLogout() {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+  const onLogout = async () => {
+    const result = await handleLogout();
+    if (result.success) {
       setIsLoggedIn(false);
       setEquipment([]);
       setCustomers([]);
       setMaintenanceRecords([]);
-    } catch (error) {
-      console.error('Error logging out:', error);
-      toast.error('Failed to log out');
     }
-  }
-
-  async function fetchData() {
-    try {
-      const expired = await isSessionExpired();
-      if (expired) {
-        setIsLoggedIn(false);
-        toast.error('Session expired. Please log in again.');
-        return;
-      }
-
-      const [equipmentRes, customersRes, maintenanceRes] = await Promise.all([
-        supabase.from('equipments').select('*').order('created_at'),
-        supabase.from('customers').select('*').order('created_at'),
-        supabase.from('maintenance_records').select(`
-          *,
-          equipments(*),
-          customer:customer_id(*),
-          visits:maintenance_visits(*)
-        `).order('created_at'),
-      ]);
-
-      if (equipmentRes.error) throw equipmentRes.error;
-      if (customersRes.error) throw customersRes.error;
-      if (maintenanceRes.error) throw maintenanceRes.error;
-
-      if (equipmentRes.data) {
-        setEquipment(equipmentRes.data);
-        setEquipmentPagination(prev => ({ ...prev, total: equipmentRes.data.length }));
-      }
-      
-      if (customersRes.data) {
-        setCustomers(customersRes.data);
-        setCustomersPagination(prev => ({ ...prev, total: customersRes.data.length }));
-      }
-      
-      if (maintenanceRes.data) {
-        setMaintenanceRecords(maintenanceRes.data);
-        setPagination(prev => ({ ...prev, total: maintenanceRes.data.length }));
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-     if (error.message?.includes('JWT expired') || error.message?.includes('invalid token')) {
-       setIsLoggedIn(false);
-       toast.error('Session expired. Please log in again.');
-     } else {
-        toast.error('Failed to load data');
-     }
-    }
-  }
+  };
 
   const handleVisitChange = (maintenanceId: string, updatedVisits: MaintenanceVisit[]) => {
     setMaintenanceRecords(records =>
@@ -213,46 +155,6 @@ function App() {
     );
   };
 
-  async function handleDelete(type: string, id: string) {
-    const expired = await isSessionExpired();
-    if (expired) {
-      setIsLoggedIn(false);
-      toast.error('Session expired. Please log in again.');
-      return;
-    }
-
-    if (type === 'equipment' || type === 'customer') {
-      const { data: relatedRecords } = await supabase
-        .from('maintenance_records')
-        .select('id')
-        .eq(type === 'equipment' ? 'equipment_id' : 'customer_id', id);
-
-      if (relatedRecords && relatedRecords.length > 0) {
-        toast.error(`Cannot delete this ${type}. It has associated maintenance records.`);
-        return;
-      }
-    }
-
-    if (!window.confirm(`Are you sure you want to delete this ${type}?`)) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from(type === 'maintenance' ? 'maintenance_records' : `${type}s`)
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast.success('Deleted successfully');
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting:', error);
-      toast.error('Failed to delete');
-    }
-  }
-
   const handleExport = () => {
     try {
       exportAllData(customers, equipment, maintenanceRecords);
@@ -261,17 +163,6 @@ function App() {
       console.error('Error exporting:', error);
       toast.error('Failed to export');
     }
-  };
-
-  const isRecordExpired = (record: MaintenanceRecord) => {
-    const serviceEndDate = new Date(record.service_end_date);
-    const currentDate = new Date();
-    currentDate.setDate(currentDate.getDate() - 1)
-    
-    serviceEndDate.setHours(0, 0, 0, 0);
-    currentDate.setHours(0, 0, 0, 0);
-    
-    return serviceEndDate < currentDate;
   };
 
   const paginatedCustomers = customers.slice(
@@ -284,122 +175,7 @@ function App() {
     equipmentPagination.page * equipmentPagination.pageSize
   );
 
-  const filteredMaintenanceRecords = maintenanceRecords.filter(record => {
-    if (filters.customer_ids?.length && !filters.customer_ids.includes(record.customer_id)) return false;
-    if (filters.equipment_ids?.length && !filters.equipment_ids.includes(record.equipment_id)) return false;
-
-        // Product Code filter
-        if (filters.model_number) {
-          const modelNumbers = filters.model_number.split(',');
-          if (!modelNumbers.includes(record.equipments.model_number)) return false;
-        }
-    
-        // Serial number filter
-        if (filters.serial_no) {
-          const serialNumbers = filters.serial_no.split(',');
-          if (!serialNumbers.includes(record.serial_no)) return false;
-        }
-    
-    // Installation date filter
-    if (filters.installation_date_range?.[0] || filters.installation_date_range?.[1]) {
-      const installationDate = new Date(record.installation_date);
-      installationDate.setHours(0, 0, 0, 0);
-
-      if (filters.installation_date_range[0]) {
-        const startDate = new Date(filters.installation_date_range[0]);
-        startDate.setHours(0, 0, 0, 0);
-        if (installationDate < startDate) return false;
-      }
-
-      if (filters.installation_date_range[1]) {
-        const endDate = new Date(filters.installation_date_range[1]);
-        endDate.setHours(23, 59, 59, 999);
-        if (installationDate > endDate) return false;
-      }
-    }
-
-    // Warranty end date filter
-    if (filters.warranty_end_date_range?.[0] || filters.warranty_end_date_range?.[1]) {
-      const warrantyEndDate = new Date(record.warranty_end_date);
-      warrantyEndDate.setHours(0, 0, 0, 0);
-
-      if (filters.warranty_end_date_range[0]) {
-        const startDate = new Date(filters.warranty_end_date_range[0]);
-        startDate.setHours(0, 0, 0, 0);
-        if (warrantyEndDate < startDate) return false;
-      }
-
-      if (filters.warranty_end_date_range[1]) {
-        const endDate = new Date(filters.warranty_end_date_range[1]);
-        endDate.setHours(23, 59, 59, 999);
-        if (warrantyEndDate > endDate) return false;
-      }
-    }
-
-    // Service start date filter
-    if (filters.service_start_date_range?.[0] || filters.service_start_date_range?.[1]) {
-      const serviceStartDate = new Date(record.service_start_date);
-      serviceStartDate.setHours(0, 0, 0, 0);
-
-      if (filters.service_start_date_range[0]) {
-        const startDate = new Date(filters.service_start_date_range[0]);
-        startDate.setHours(0, 0, 0, 0);
-        if (serviceStartDate < startDate) return false;
-      }
-
-      if (filters.service_start_date_range[1]) {
-        const endDate = new Date(filters.service_start_date_range[1]);
-        endDate.setHours(23, 59, 59, 999);
-        if (serviceStartDate > endDate) return false;
-      }
-    }
-
-    // Service end date filter
-    if (filters.service_end_date_range?.[0] || filters.service_end_date_range?.[1]) {
-      const serviceEndDate = new Date(record.service_end_date);
-      serviceEndDate.setHours(0, 0, 0, 0);
-
-      if (filters.service_end_date_range[0]) {
-        const startDate = new Date(filters.service_end_date_range[0]);
-        startDate.setHours(0, 0, 0, 0);
-        if (serviceEndDate < startDate) return false;
-      }
-
-      if (filters.service_end_date_range[1]) {
-        const endDate = new Date(filters.service_end_date_range[1]);
-        endDate.setHours(23, 59, 59, 999);
-        if (serviceEndDate > endDate) return false;
-      }
-    }
-
-
-    if (filters.service_statuses?.length && !filters.service_statuses.includes(record.service_status)) return false;
-
-    if (filters.record_statuses?.length) {
-      const isExpired = isRecordExpired(record);
-      const status = isExpired ? 'expired' : 'active';
-      if (!filters.record_statuses.includes(status)) return false;
-    }
-
-    if (filters.age_range?.years) {
-      const ageInMonths = calculateAgeInMonths(record.installation_date);
-      const ageInYears = ageInMonths / 12;
-
-      const { min, max } = filters.age_range.years;
-
-      if (min !== null && ageInYears < min) return false;
-
-      if (max !== null) {
-        if (min === 0) {
-          if (ageInYears >= max) return false;
-        } else {
-          if (ageInYears > max) return false;
-        }
-      }
-    }
-
-    return true;
-  });
+  const filteredMaintenanceRecords = filterMaintenanceRecords(maintenanceRecords, filters);
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, total: filteredMaintenanceRecords.length, page: 1 }));
@@ -408,84 +184,6 @@ function App() {
   const paginatedRecords = filteredMaintenanceRecords.slice(
     (pagination.page - 1) * pagination.pageSize,
     pagination.page * pagination.pageSize
-  );
-
-  const renderSidebar = () => (
-    <div 
-      className={`
-        fixed inset-y-0 left-0 z-40 bg-gray-900 text-white transform transition-all duration-300 ease-in-out
-        ${isSidebarOpen || isHoveringNav ? 'w-64' : 'w-16'}
-        ${isHoveringNav ? 'translate-x-0' : ''}
-      `}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className="flex items-center justify-between h-16 px-4 bg-gray-800">
-        <div className="flex items-center space-x-2">
-          <Wrench className="h-8 w-8 text-blue-400" />
-          {(isSidebarOpen || isHoveringNav) && (
-            <span className="text-lg font-semibold">Equipment Manager</span>
-          )}
-        </div>
-        {(isSidebarOpen || isHoveringNav) && (
-          <button
-            onClick={() => setIsSidebarOpen(false)}
-            className="p-2 rounded-md hover:bg-gray-700"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-        )}
-      </div>
-
-      <nav className="flex flex-col h-[calc(100vh-4rem)] px-2 no-scrollbar">
-        <div className="flex-1 space-y-2 py-4">
-          <button
-            onClick={() => setActiveTab('customers')}
-            className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
-              ${activeTab === 'customers' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
-          >
-            <Users className="h-5 w-5" />
-            {(isSidebarOpen || isHoveringNav) && <span>Customers</span>}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('equipment')}
-            className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
-              ${activeTab === 'equipment' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
-          >
-            <Wrench className="h-5 w-5" />
-            {(isSidebarOpen || isHoveringNav) && <span>Equipments</span>}
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('maintenance')}
-            className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
-              ${activeTab === 'maintenance' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
-          >
-            <Calendar className="h-5 w-5" />
-            {(isSidebarOpen || isHoveringNav) && <span>Maintenance</span>}
-          </button>
-
-          <button
-            onClick={handleExport}
-            className="w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200 hover:bg-gray-800"
-          >
-            <Download className="h-5 w-5" />
-            {(isSidebarOpen || isHoveringNav) && <span>Export Data</span>}
-          </button>
-        </div>
-
-        <div className="p-4 border-t border-gray-700">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
-          >
-            <LogOut className="h-5 w-5" />
-            {(isSidebarOpen || isHoveringNav) && <span>Logout</span>}
-          </button>
-        </div>
-      </nav>
-    </div>
   );
 
   if (!isLoggedIn) {
@@ -497,7 +195,7 @@ function App() {
             <h1 className="ml-3 text-2xl font-bold text-white">Medical Equipment Maintenance</h1>
           </div>
           
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={onLogin} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-200">Email</label>
               <input
@@ -546,7 +244,17 @@ function App() {
       </div>
 
       <div className="flex">
-        {renderSidebar()}
+        <Sidebar
+          isSidebarOpen={isSidebarOpen}
+          isHoveringNav={isHoveringNav}
+          activeTab={activeTab}
+          handleMouseEnter={handleMouseEnter}
+          handleMouseLeave={handleMouseLeave}
+          setIsSidebarOpen={setIsSidebarOpen}
+          setActiveTab={setActiveTab}
+          handleExport={handleExport}
+          handleLogout={onLogout}
+        />
 
         <div className={`flex-1 min-h-screen overflow-hidden transition-all duration-300 ${
           isSidebarOpen || isHoveringNav ? 'ml-64' : 'ml-16'
@@ -568,13 +276,13 @@ function App() {
                     {isFiltersVisible ? 'Hide Filters' : 'Show Filters'}
                     {isFiltersVisible ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />}
                   </button>
-                    <button
-                      onClick={() => exportFilteredMaintenanceRecords(filteredMaintenanceRecords, filters, customers, equipment)}
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <Download className="h-5 w-5 mr-2" />
-                      Export Filtered Records
-                    </button>
+                  <button
+                    onClick={() => exportFilteredMaintenanceRecords(filteredMaintenanceRecords, filters, customers, equipment)}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Export Filtered Records
+                  </button>
                 </div>
               )}
             </div>
@@ -590,273 +298,69 @@ function App() {
                     maintenanceRecords={maintenanceRecords}
                   />
                 </div>
-                <div className="bg-white shadow rounded-lg overflow-hidden">
-                  <div className="px-4 py-5 sm:p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900">Maintenance Records</h3>
-                      <button
-                        onClick={() => setAddingType('maintenance')}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <Calendar className="h-5 w-5 mr-2" />
-                        Add Maintenance
-                      </button>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Code</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Age</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty End Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Number</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {paginatedRecords.map((record) => {
-                            const expired = isRecordExpired(record);
-                            return (
-                              <tr key={record.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {record.customer.name}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {record.equipments.name}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {record.equipments.model_number}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {record.serial_no}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {format(new Date(record.installation_date), 'PP')}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {calculateAge(record.installation_date)}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {format(new Date(record.warranty_end_date), 'PP')}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {record.service_status}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                   {record.service_start_date && record.service_end_date 
-                                   ? `${format(new Date(record.service_start_date), 'PP')} - ${format(new Date(record.service_end_date), 'PP')}`
-                                   : ''}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {record.invoice_number}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {record.invoice_date ? format(new Date(record.invoice_date), 'PP') : ''}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {record.amount}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  <button
-                                    onClick={() => setEditingVisits(record)}
-                                    className="inline-flex items-center text-blue-600 hover:text-blue-900"
-                                    title="View visits"
-                                  >
-                                    <Eye className="h-4 w-4 mr-1" />
-                                    <span>{record.visits?.length || 0} visits</span>
-                                  </button>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                  }`}>
-                                    {expired ? 'Expired' : 'Active'}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {record.notes}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                                  <button
-                                    onClick={() => !expired && setEditingItem({ type: 'maintenance', data: record })}
-                                    className={`inline-flex items-center ${expired ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-indigo-600 hover:text-indigo-900'}`}
-                                    title={expired ? 'Cannot edit expired records' : 'Edit record'}
-                                    disabled={expired}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => !expired && handleDelete('maintenance', record.id)}
-                                    className={`inline-flex items-center ${expired ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-red-600 hover:text-red-900'}`}
-                                    title={expired ? 'Cannot delete expired records' : 'Delete record'}
-                                    disabled={expired}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                      <Pagination
-                        pagination={pagination}
-                        onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
-                        onPageSizeChange={(pageSize) => setPagination(prev => ({ ...prev, pageSize, page: 1 }))}
-                      />
-                    </div>
-                  </div>
-                </div>
+                <MaintenanceList
+                  records={paginatedRecords}
+                  pagination={pagination}
+                  onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+                  onPageSizeChange={(pageSize) => setPagination(prev => ({ ...prev, pageSize, page: 1 }))}
+                  onEdit={(record) => setEditingItem({ type: 'maintenance', data: record })}
+                  onDelete={async (id) => {
+                    try {
+                      const deleted = await deleteMaintenance(id);
+                      if (deleted) {
+                        loadData();
+                      }
+                    } catch (error) {
+                      // Error is already handled in the service
+                    }
+                  }}
+                  onAdd={() => setAddingType('maintenance')}
+                  onViewVisits={(record) => setEditingVisits(record)}
+                  isRecordExpired={isRecordExpired}
+                />
               </>
             )}
 
             {activeTab === 'equipment' && (
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">Equipment List</h3>
-                    <button
-                      onClick={() => setAddingType('equipment')}
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <Wrench className="h-5 w-5 mr-2" />
-                      Add Equipment
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Code</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {paginatedEquipment.map((eq) => (
-                          <tr key={eq.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {eq.name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {eq.model_number}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              {eq.notes}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                              <button
-                                onClick={() => setEditingItem({ type: 'equipment', data: eq })}
-                                className="inline-flex items-center text-indigo-600 hover:text-indigo-900"
-                                title="Edit equipment"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete('equipment', eq.id)}
-                                className="inline-flex items-center text-red-600 hover:text-red-900"
-                                title="Delete equipment"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <Pagination
-                      pagination={equipmentPagination}
-                      onPageChange={(page) => setEquipmentPagination(prev => ({ ...prev, page }))}
-                      onPageSizeChange={(pageSize) => setEquipmentPagination(prev => ({ ...prev, pageSize, page: 1 }))}
-                    />
-                  </div>
-                </div>
-              </div>
+              <EquipmentList
+                equipment={paginatedEquipment}
+                pagination={equipmentPagination}
+                onPageChange={(page) => setEquipmentPagination(prev => ({ ...prev, page }))}
+                onPageSizeChange={(pageSize) => setEquipmentPagination(prev => ({ ...prev, pageSize, page: 1 }))}
+                onEdit={(equipment) => setEditingItem({ type: 'equipment', data: equipment })}
+                onDelete={async (id) => {
+                  try {
+                    const deleted = await deleteEquipment(id);
+                    if (deleted) {
+                      loadData();
+                    }
+                  } catch (error) {
+                    // Error is already handled in the service
+                  }
+                }}
+                onAdd={() => setAddingType('equipment')}
+              />
             )}
 
             {activeTab === 'customers' && (
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">Customers</h3>
-                    <button
-                      onClick={() => setAddingType('customer')}
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <Users className="h-5 w-5 mr-2" />
-                      Add Customer
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio Medical Email</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio Medical Contact</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio Medical HOD</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {paginatedCustomers.map((customer) => (
-                          <tr key={customer.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {customer.name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {customer.bio_medical_email}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {customer.bio_medical_contact}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {customer.bio_medical_hod_name}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              {customer.notes}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                              <button
-                                onClick={() => setEditingItem({ type: 'customer', data: customer })}
-                                className="inline-flex items-center text-indigo-600 hover:text-indigo-900"
-                                title="Edit customer"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete('customer', customer.id)}
-                                className="inline-flex items-center text-red-600 hover:text-red-900"
-                                title="Delete customer"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <Pagination
-                      pagination={customersPagination}
-                      onPageChange={(page) => setCustomersPagination(prev => ({ ...prev, page }))}
-                      onPageSizeChange={(pageSize) => setCustomersPagination(prev => ({ ...prev, pageSize, page: 1 }))}
-                    />
-                  </div>
-                </div>
-              </div>
+              <CustomerList
+                customers={paginatedCustomers}
+                pagination={customersPagination}
+                onPageChange={(page) => setCustomersPagination(prev => ({ ...prev, page }))}
+                onPageSizeChange={(pageSize) => setCustomersPagination(prev => ({ ...prev, pageSize, page: 1 }))}
+                onEdit={(customer) => setEditingItem({ type: 'customer', data: customer })}
+                onDelete={async (id) => {
+                  try {
+                    const deleted = await deleteCustomer(id);
+                    if (deleted) {
+                      loadData();
+                    }
+                  } catch (error) {
+                    // Error is already handled in the service
+                  }
+                }}
+                onAdd={() => setAddingType('customer')}
+              />
             )}
           </div>
         </div>
@@ -869,25 +373,17 @@ function App() {
           onClose={() => setEditingItem(null)}
           onSave={async (data) => {
             try {
-              let updateData = { ...data };
-
               if (editingItem.type === 'maintenance') {
-                const { customer, equipments, visits, ...filteredData } = data;
-                updateData = filteredData;
+                await updateMaintenance(data as MaintenanceRecord);
+              } else if (editingItem.type === 'equipment') {
+                await updateEquipment(data as Equipments);
+              } else {
+                await updateCustomer(data as Customer);
               }
-
-              const { error } = await supabase
-                .from(editingItem.type === 'maintenance' ? 'maintenance_records' : `${editingItem.type}s`)
-                .update(updateData)
-                .eq('id', updateData.id);
-
-              if (error) throw error;
-
-              fetchData();
+              loadData();
               setEditingItem(null);
             } catch (error) {
-              console.error('Error updating:', error);
-              toast.error('Failed to update');
+              // Error is already handled in the service
             }
           }}
           customers={customers}
@@ -899,7 +395,7 @@ function App() {
         <AddModal
           type={addingType}
           onClose={() => setAddingType(null)}
-          onSuccess={fetchData}
+          onSuccess={loadData}
           customers={customers}
           equipment={equipment}
         />
