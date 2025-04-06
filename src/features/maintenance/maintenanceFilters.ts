@@ -3,18 +3,18 @@ import { MaintenanceRecord, MaintenanceFilters } from '../../types';
 export const calculateAgeInMonths = (date: string) => {
   const installDate = new Date(date);
   const now = new Date();
-  return (now.getFullYear() - installDate.getFullYear()) * 12 + 
-         (now.getMonth() - installDate.getMonth());
+  return (now.getFullYear() - installDate.getFullYear()) * 12 +
+    (now.getMonth() - installDate.getMonth());
 };
 
 export const isRecordExpired = (record: MaintenanceRecord) => {
   const serviceEndDate = new Date(record.service_end_date);
   const currentDate = new Date();
   currentDate.setDate(currentDate.getDate() - 1)
-  
+
   serviceEndDate.setHours(0, 0, 0, 0);
   currentDate.setHours(0, 0, 0, 0);
-  
+
   return serviceEndDate < currentDate;
 };
 
@@ -87,6 +87,40 @@ export const filterMaintenanceRecords = (
         if (serviceStartDate > endDate || serviceEndDate > endDate) return false;
       }
     }
+
+    // Visit status filter
+    if (filters.visit_statuses?.length) {
+      const hasMatchingVisit = record.visits?.some(visit =>
+        filters.visit_statuses!.includes(visit.visit_status)
+      );
+      if (!hasMatchingVisit) return false;
+    }
+
+    // Scheduled date filter
+    if (filters.scheduled_date_range?.[0] || filters.scheduled_date_range?.[1]) {
+      const startDate = filters.scheduled_date_range[0]
+        ? new Date(filters.scheduled_date_range[0])
+        : null;
+      const endDate = filters.scheduled_date_range[1]
+        ? new Date(filters.scheduled_date_range[1])
+        : null;
+
+      if (startDate) startDate.setHours(0, 0, 0, 0);
+      if (endDate) endDate.setHours(23, 59, 59, 999);
+
+      const hasMatchingScheduledVisit = record.visits?.some(visit => {
+        const scheduled = new Date(visit.scheduled_date);
+        scheduled.setHours(0, 0, 0, 0);
+
+        if (startDate && scheduled < startDate) return false;
+        if (endDate && scheduled > endDate) return false;
+
+        return true;
+      });
+
+      if (!hasMatchingScheduledVisit) return false;
+    }
+
 
     if (filters.service_statuses?.length && !filters.service_statuses.includes(record.service_status)) return false;
 

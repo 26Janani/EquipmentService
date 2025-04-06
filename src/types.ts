@@ -62,6 +62,8 @@ export interface MaintenanceFilters {
   service_date_range?: [Date | null, Date | null];
   service_statuses?: string[];
   record_statuses?: ('active' | 'expired')[];
+  visit_statuses?: string[];  
+  scheduled_date_range?: [Date | null, Date | null]; 
   age_range?: {
     years: { min: number | null; max: number | null };
   };

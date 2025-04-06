@@ -26,12 +26,18 @@ const RECORD_STATUS_OPTIONS = [
   { value: 'expired', label: 'Expired' }
 ];
 
-export function MaintenanceFilters({ 
-  filters, 
-  onFiltersChange, 
-  customers = [], 
-  equipments = [], 
-  maintenanceRecords = [] 
+const VISIT_STATUS_OPTIONS = [
+  { value: 'Scheduled', label: 'Scheduled' },
+  { value: 'Attended', label: 'Attended' },
+  { value: 'Closed', label: 'Closed' }
+];
+
+export function MaintenanceFilters({
+  filters,
+  onFiltersChange,
+  customers = [],
+  equipments = [],
+  maintenanceRecords = []
 }: MaintenanceFiltersProps) {
   // Get unique model numbers from equipment
   const modelNumberOptions = React.useMemo(() => {
@@ -234,6 +240,33 @@ export function MaintenanceFilters({
           endDate={filters.service_date_range?.[1] || null}
           onChange={(dates) => onFiltersChange({ ...filters, service_date_range: dates })}
           label="Service Date Range"
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Visit Status</label>
+          <Select
+            isMulti
+            value={filters.visit_statuses?.map(status => ({
+              value: status,
+              label: status
+            })) || null}
+            options={VISIT_STATUS_OPTIONS}
+            onChange={(selected) => onFiltersChange({
+              ...filters,
+              visit_statuses: selected ? selected.map(option => option.value) : undefined
+            })}
+            className="basic-multi-select"
+            classNamePrefix="select"
+            placeholder="Select visit status..."
+            isClearable
+          />
+        </div>
+
+        <DateRangePicker
+          startDate={filters.scheduled_date_range?.[0] || null}
+          endDate={filters.scheduled_date_range?.[1] || null}
+          onChange={(dates) => onFiltersChange({ ...filters, scheduled_date_range: dates })}
+          label="Scheduled Date Range"
         />
       </div>
     </div>

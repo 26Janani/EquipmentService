@@ -52,9 +52,18 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
     return visit < currentDate;
   };
 
+  // Check if visit is in the past AND is not a scheduled visit
+  const isNonScheduledPastVisit = (visit: MaintenanceVisit) => {
+    if (visit.visit_status !== 'Scheduled') {
+      const dateToCheck = visit.visit_date;
+      return dateToCheck ? isVisitInPast(dateToCheck) : false;
+    }
+    return false;
+  };
+
   const validateVisitData = (visit: any, isEditing: boolean = false) => {
     const requiredFields = ['visit_status'];
-    
+
     if (visit.visit_status === 'Scheduled') {
       requiredFields.push('scheduled_date');
     } else {
@@ -67,16 +76,32 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
       return false;
     }
 
-    const dateToCheck = visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date;
-    const visitDate = new Date(dateToCheck);
-    const currentDate = new Date();
-    currentDate.setDate(currentDate.getDate() - 1)
-    currentDate.setHours(0, 0, 0, 0);
-    visitDate.setHours(0, 0, 0, 0);
+    // For non-scheduled visits, enforce date validation
+    // if (visit.visit_status !== 'Scheduled') {
+    //   const visitDate = new Date(visit.visit_date);
+    //   const currentDate = new Date();
+    //   currentDate.setDate(currentDate.getDate() - 1)
+    //   currentDate.setHours(0, 0, 0, 0);
+    //   visitDate.setHours(0, 0, 0, 0);
 
-    if (!isEditing && visitDate < currentDate) {
-      toast.error(`${visit.visit_status === 'Scheduled' ? 'Scheduled date' : 'Visit date'} cannot be in the past`);
-      return false;
+    //   if (!isEditing && visitDate < currentDate) {
+    //     toast.error('Visit date cannot be in the past');
+    //     return false;
+    //   }
+    // }
+
+    // For new Scheduled visits, enforce date validation
+    if (!isEditing && visit.visit_status === 'Scheduled') {
+      const scheduledDate = new Date(visit.scheduled_date);
+      const currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() - 1)
+      currentDate.setHours(0, 0, 0, 0);
+      scheduledDate.setHours(0, 0, 0, 0);
+
+      if (scheduledDate < currentDate) {
+        toast.error('Scheduled date cannot be in the past for new visits');
+        return false;
+      }
     }
 
     return true;
@@ -134,7 +159,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
 
     try {
       const updateData = {
-        scheduled_date: visit.visit_status === 'Scheduled' ? visit.scheduled_date : null,
+        scheduled_date: visit.scheduled_date,
         visit_date: visit.visit_status !== 'Scheduled' ? visit.visit_date : null,
         visit_status: visit.visit_status,
         work_done: visit.visit_status === 'Scheduled' ? null : visit.work_done,
@@ -193,14 +218,13 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
     if (isEditing) {
       setEditingVisit(prev => {
         if (!prev) return null;
-        
+
         return {
           ...prev,
           visit_status: status,
           work_done: status === 'Scheduled' ? null : prev.work_done,
           attended_by: status === 'Scheduled' ? null : prev.attended_by,
           equipment_status: status === 'Scheduled' ? 'Working' : prev.equipment_status,
-          // Don't auto-populate visit_date when changing status
           visit_date: status === 'Scheduled' ? null : prev.visit_date,
           scheduled_date: prev.scheduled_date,
         };
@@ -234,7 +258,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
             <X className="h-6 w-6" />
           </button>
         </div>
-        
+
         {isExpired && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
             <p className="text-red-700">
@@ -269,7 +293,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                     value={newVisit.scheduled_date}
                     onChange={(e) => setNewVisit({ ...newVisit, scheduled_date: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    min={new Date().toISOString().split('T')[0]}
+                    // min={new Date().toISOString().split('T')[0]}
                     required
                   />
                 </div>
@@ -284,7 +308,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                       value={newVisit.visit_date}
                       onChange={(e) => setNewVisit({ ...newVisit, visit_date: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      min={new Date().toISOString().split('T')[0]}
+                      // min={new Date().toISOString().split('T')[0]}
                       required
                     />
                   </div>
@@ -371,23 +395,21 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                           </select>
                         </td>
                         <td className="px-6 py-4">
-                          {editingVisit.scheduled_date && (
-                            <input
-                              type="date"
-                              value={editingVisit.scheduled_date?.split('T')[0] || ''}
-                              onChange={(e) => {
-                                console.log('Inside visit module');
-                                setEditingVisit({
+                          <input
+                            type="date"
+                            value={editingVisit.scheduled_date ?
+                              new Date(editingVisit.scheduled_date).toISOString().substring(0, 10) :
+                              ''}
+                            onChange={(e) => {
+                              console.log('Editing scheduled date:', e.target.value);
+                              setEditingVisit({
                                 ...editingVisit,
-                                scheduled_date: new Date(e.target.value).toISOString()
-                              })}}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                              min={new Date().toISOString().split('T')[0]}
-                              required={editingVisit.visit_status === 'Scheduled'}
-                              readOnly={editingVisit.visit_status !== 'Scheduled'}
-                              disabled={editingVisit.visit_status !== 'Scheduled'}
-                            />
-                          )}
+                                scheduled_date: e.target.value ? new Date(e.target.value).toISOString() : ''
+                              });
+                            }}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            required={editingVisit.visit_status === 'Scheduled'}
+                          />
                         </td>
                         <td className="px-6 py-4">
                           {editingVisit.visit_status !== 'Scheduled' && (
@@ -399,7 +421,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                                 visit_date: new Date(e.target.value).toISOString()
                               })}
                               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                              min={new Date().toISOString().split('T')[0]}
+                              // min={new Date().toISOString().split('T')[0]}
                               required
                             />
                           )}
@@ -491,26 +513,39 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                         {!isExpired && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                             <button
-                              onClick={() => !isVisitInPast(visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date) && setEditingVisit(visit)}
+                              onClick={() => {
+                                // Always allow editing of scheduled visits
+                                if (visit.visit_status === 'Scheduled' || !isNonScheduledPastVisit(visit)) {
+                                  console.log('Setting editing visit with date:', visit.scheduled_date);
+                                  setEditingVisit(visit);
+                                }
+                              }}
                               className={`inline-flex items-center ${
-                                isVisitInPast(visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date)
-                                  ? 'opacity-50 cursor-not-allowed text-gray-400' 
+                                // Disable editing for non-scheduled visits in the past
+                                isNonScheduledPastVisit(visit)
+                                  ? 'opacity-50 cursor-not-allowed text-gray-400'
                                   : 'text-indigo-600 hover:text-indigo-900'
-                              }`}
-                              title={isVisitInPast(visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date) ? 'Cannot edit past visits' : 'Edit visit'}
-                              disabled={isVisitInPast(visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date)}
+                                }`}
+                              title={isNonScheduledPastVisit(visit) ? 'Cannot edit past non-scheduled visits' : 'Edit visit'}
+                              disabled={isNonScheduledPastVisit(visit)}
                             >
                               <Pencil className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => !isVisitInPast(visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date) && handleRemoveVisit(visit.id)}
+                              onClick={() => {
+                                // Allow deleting scheduled visits regardless of date
+                                if (visit.visit_status === 'Scheduled' || !isNonScheduledPastVisit(visit)) {
+                                  handleRemoveVisit(visit.id);
+                                }
+                              }}
                               className={`inline-flex items-center ${
-                                isVisitInPast(visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date)
+                                // Disable deletion for non-scheduled visits in the past
+                                isNonScheduledPastVisit(visit)
                                   ? 'opacity-50 cursor-not-allowed text-gray-400'
                                   : 'text-red-600 hover:text-red-900'
-                              }`}
-                              title={isVisitInPast(visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date) ? 'Cannot delete past visits' : 'Delete visit'}
-                              disabled={isVisitInPast(visit.visit_status === 'Scheduled' ? visit.scheduled_date : visit.visit_date)}
+                                }`}
+                              title={isNonScheduledPastVisit(visit) ? 'Cannot delete past non-scheduled visits' : 'Delete visit'}
+                              disabled={isNonScheduledPastVisit(visit)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
