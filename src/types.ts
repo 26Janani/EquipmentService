@@ -1,4 +1,4 @@
-export interface Equipments {
+export interface Equipment {
   id: string;
   name: string;
   model_number: string;
@@ -22,6 +22,8 @@ export interface MaintenanceVisit {
   id: string;
   maintenance_record_id: string;
   visit_date: string;
+  visit_status: string;
+  equipment_status: string;
   work_done: string;
   attended_by: string;
   created_at?: string;
@@ -40,7 +42,7 @@ export interface MaintenanceRecord {
   service_end_date: string;
   amount: number;
   notes?: string;
-  equipment: Equipments;
+  equipment: Equipment;
   customer: Customer;
   visits?: MaintenanceVisit[];
   created_at?: string;
@@ -54,8 +56,7 @@ export interface MaintenanceFilters {
   serial_no?: string;
   installation_date_range?: [Date | null, Date | null];
   warranty_end_date_range?: [Date | null, Date | null];
-  service_start_date_range?: [Date | null, Date | null];
-  service_end_date_range?: [Date | null, Date | null];
+  service_date_range?: [Date | null, Date | null];
   service_statuses?: string[];
   record_statuses?: ('active' | 'expired')[];
   age_range?: {

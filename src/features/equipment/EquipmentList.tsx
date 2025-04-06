@@ -1,15 +1,15 @@
 import React from 'react';
-import { Equipments } from '../../types';
+import { Equipment } from '../../types';
 import { Pencil, Trash2, Wrench } from 'lucide-react';
 import { Pagination } from '../../components/Pagination';
 import { PaginationState } from '../../types';
 
 interface EquipmentListProps {
-  equipment: Equipments[];
+  equipment: Equipment[];
   pagination: PaginationState;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onEdit: (equipment: Equipments) => void;
+  onEdit: (equipment: Equipment) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
 }

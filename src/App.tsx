@@ -294,7 +294,7 @@ function App() {
                     filters={filters}
                     onFiltersChange={setFilters}
                     customers={customers}
-                    equipment={equipment}
+                    equipments={equipment}
                     maintenanceRecords={maintenanceRecords}
                   />
                 </div>
@@ -397,7 +397,7 @@ function App() {
           onClose={() => setAddingType(null)}
           onSuccess={loadData}
           customers={customers}
-          equipment={equipment}
+          equipments={equipment}
         />
       )}
 

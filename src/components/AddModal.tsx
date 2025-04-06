@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Customer, Equipments, MaintenanceRecord } from '../types';
+import { Customer, Equipments } from '../types';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
@@ -10,10 +10,10 @@ interface AddModalProps {
   onClose: () => void;
   onSuccess: () => void;
   customers?: Customer[];
-  equipment?: Equipments[];
+  equipments?: Equipments[];
 }
 
-export function AddModal({ type, onClose, onSuccess, customers, equipment }: AddModalProps) {
+export function AddModal({ type, onClose, onSuccess, customers, equipments }: AddModalProps) {
   const [formData, setFormData] = useState<any>({});
   const [selectedServiceStatus, setSelectedServiceStatus] = useState<string>('');
 
@@ -22,47 +22,71 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
     { value: 'CAMC', label: 'CAMC' },
     { value: 'AMC', label: 'AMC' },
     { value: 'CALIBRATION', label: 'CALIBRATION' },
-    { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' }
+    { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' },
+    { value: 'END OF LIFE', label: 'END OF LIFE' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate service end date for maintenance records
-    if (type === 'maintenance') {
-      const serviceEndDate = new Date(formData.service_end_date);
-      const currentDate = new Date();
-      currentDate.setDate(currentDate.getDate() - 1)
-      
-      // Reset time part for accurate date comparison
-      serviceEndDate.setHours(0, 0, 0, 0);
-      currentDate.setHours(0, 0, 0, 0);
-
-      if (serviceEndDate < currentDate) {
-        toast.error('Service end date must be greater than or equal to current date');
-        return;
-      }
-    }
-
     try {
+      if (type === 'maintenance') {
+        let maintenanceData = { ...formData };
 
-      // For ONCALL SERVICE, set default values for service dates and invoice details
-      let dataToSubmit = { ...formData };
-      if (type === 'maintenance' && selectedServiceStatus === 'ONCALL SERVICE') {
-        const today = new Date().toISOString().split('T')[0];
-        dataToSubmit = {
-          ...dataToSubmit,
-          invoice_number: 'N/A',
-          invoice_date: null,
-          amount: 0
-        };
+        if (selectedServiceStatus === 'ONCALL SERVICE' || selectedServiceStatus === 'END OF LIFE') {
+          maintenanceData = {
+            ...maintenanceData,
+            service_start_date: null,
+            service_end_date: null,
+            invoice_number: 'N/A',
+            invoice_date: null,
+            amount: 0
+          };
+        } else {
+          // Validate service end date for non-ONCALL SERVICE records
+          const serviceEndDate = new Date(formData.service_end_date);
+          const currentDate = new Date();
+          currentDate.setDate(currentDate.getDate() - 1);
+          
+          serviceEndDate.setHours(0, 0, 0, 0);
+          currentDate.setHours(0, 0, 0, 0);
+
+          if (serviceEndDate < currentDate) {
+            toast.error('Service end date must be greater than or equal to current date');
+            return;
+          }
+
+          if (!formData.service_start_date || !formData.service_end_date) {
+            toast.error('Please fill in all required fields');
+            return;
+          }
+        }
+
+        if (!maintenanceData.customer_id || !maintenanceData.equipment_id || !maintenanceData.serial_no || !maintenanceData.installation_date || !maintenanceData.warranty_end_date || !maintenanceData.service_status) {
+          toast.error('Please fill in all required fields');
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from(type === 'maintenance' ? 'maintenance_records' : `${type}s`)
+          .insert([maintenanceData])
+          .select();
+
+        if (error) throw error;
+      } else {
+        if (!formData.name || (type === 'equipment' && !formData.model_number) || 
+            (type === 'customer' && (!formData.bio_medical_email || !formData.bio_medical_contact || !formData.bio_medical_hod_name))) {
+          toast.error('Please fill in all required fields');
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from(`${type}s`)
+          .insert([formData])
+          .select();
+
+        if (error) throw error;
       }
-
-      const { error } = await supabase
-        .from(type === 'maintenance' ? 'maintenance_records' : `${type}s`)
-        .insert([dataToSubmit]);
-
-      if (error) throw error;
 
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} added successfully`);
       onSuccess();
@@ -167,7 +191,7 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
       <div>
         <label className="block text-sm font-medium text-gray-700">Equipment</label>
         <Select
-          options={equipment?.map(e => ({ value: e.id, label: `${e.name} - ${e.model_number}` }))}
+          options={equipments?.map(e => ({ value: e.id, label: `${e.name}` }))}
           onChange={(selected) => setFormData({ ...formData, equipment_id: selected?.value })}
           className="mt-1"
           required
@@ -212,7 +236,10 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
           required
         />
       </div>
-      <div>
+
+      { (selectedServiceStatus !== 'ONCALL SERVICE' && selectedServiceStatus !== 'END OF LIFE') && (
+        <>
+          <div>
             <label className="block text-sm font-medium text-gray-700">Service Start Date</label>
             <input
               type="date"
@@ -229,11 +256,7 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               required
             />
-            <p className="mt-1 text-sm text-gray-500">Service end date must be greater than or equal to current date</p>
           </div>
-
-      {selectedServiceStatus !== 'ONCALL SERVICE' && (
-        <>
           <div>
             <label className="block text-sm font-medium text-gray-700">Invoice Number</label>
             <input
@@ -260,7 +283,6 @@ export function AddModal({ type, onClose, onSuccess, customers, equipment }: Add
               min="0"
               onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="Enter Invoice amount"
               required
             />
           </div>

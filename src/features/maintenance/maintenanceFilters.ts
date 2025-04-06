@@ -26,12 +26,6 @@ export const filterMaintenanceRecords = (
     if (filters.customer_ids?.length && !filters.customer_ids.includes(record.customer_id)) return false;
     if (filters.equipment_ids?.length && !filters.equipment_ids.includes(record.equipment_id)) return false;
 
-    // Product Code filter
-    if (filters.model_number) {
-      const modelNumbers = filters.model_number.split(',');
-      if (!modelNumbers.includes(record.equipments.model_number)) return false;
-    }
-
     // Serial number filter
     if (filters.serial_no) {
       const serialNumbers = filters.serial_no.split(',');
@@ -74,39 +68,23 @@ export const filterMaintenanceRecords = (
       }
     }
 
-    // Service start date filter
-    if (filters.service_start_date_range?.[0] || filters.service_start_date_range?.[1]) {
+    // Service date filter
+    if (filters.service_date_range?.[0] || filters.service_date_range?.[1]) {
       const serviceStartDate = new Date(record.service_start_date);
       serviceStartDate.setHours(0, 0, 0, 0);
-
-      if (filters.service_start_date_range[0]) {
-        const startDate = new Date(filters.service_start_date_range[0]);
-        startDate.setHours(0, 0, 0, 0);
-        if (serviceStartDate < startDate) return false;
-      }
-
-      if (filters.service_start_date_range[1]) {
-        const endDate = new Date(filters.service_start_date_range[1]);
-        endDate.setHours(23, 59, 59, 999);
-        if (serviceStartDate > endDate) return false;
-      }
-    }
-
-    // Service end date filter
-    if (filters.service_end_date_range?.[0] || filters.service_end_date_range?.[1]) {
       const serviceEndDate = new Date(record.service_end_date);
       serviceEndDate.setHours(0, 0, 0, 0);
 
-      if (filters.service_end_date_range[0]) {
-        const startDate = new Date(filters.service_end_date_range[0]);
+      if (filters.service_date_range[0]) {
+        const startDate = new Date(filters.service_date_range[0]);
         startDate.setHours(0, 0, 0, 0);
-        if (serviceEndDate < startDate) return false;
+        if (serviceStartDate < startDate || serviceEndDate < startDate) return false;
       }
 
-      if (filters.service_end_date_range[1]) {
-        const endDate = new Date(filters.service_end_date_range[1]);
+      if (filters.service_date_range[1]) {
+        const endDate = new Date(filters.service_date_range[1]);
         endDate.setHours(23, 59, 59, 999);
-        if (serviceEndDate > endDate) return false;
+        if (serviceStartDate > endDate || serviceEndDate > endDate) return false;
       }
     }
 

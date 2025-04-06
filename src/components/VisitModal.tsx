@@ -13,12 +13,24 @@ interface VisitModalProps {
   isExpired: boolean;
 }
 
+const VISIT_STATUS_OPTIONS = [
+  { value: 'Attended', label: 'Attended' },
+  { value: 'Closed', label: 'Closed' }
+];
+
+const EQUIPMENT_STATUS_OPTIONS = [
+  { value: 'Breakdown', label: 'Breakdown' },
+  { value: 'Working', label: 'Working' }
+];
+
 export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isExpired }: VisitModalProps) {
   const [visitsList, setVisitsList] = useState<MaintenanceVisit[]>(visits || []);
   const [newVisit, setNewVisit] = useState({
     visit_date: '',
     work_done: '',
-    attended_by: ''
+    attended_by: '',
+    visit_status: '',
+    equipment_status: ''
   });
   const [editingVisit, setEditingVisit] = useState<MaintenanceVisit | null>(null);
 
@@ -37,7 +49,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
       return;
     }
 
-    if (!newVisit.visit_date || !newVisit.work_done || !newVisit.attended_by) {
+    if (!newVisit.visit_date || !newVisit.work_done || !newVisit.attended_by || !newVisit.visit_status || !newVisit.equipment_status) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -58,6 +70,8 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
       visit_date: new Date(newVisit.visit_date).toISOString(),
       work_done: newVisit.work_done,
       attended_by: newVisit.attended_by,
+      visit_status: newVisit.visit_status,
+      equipment_status: newVisit.equipment_status
     };
 
     try {
@@ -72,7 +86,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
       const updatedVisits = [...visitsList, data];
       setVisitsList(updatedVisits);
       onVisitChange(maintenanceId, updatedVisits);
-      setNewVisit({ visit_date: '', work_done: '', attended_by: '' });
+      setNewVisit({ visit_date: '', work_done: '', attended_by: '', visit_status: '', equipment_status: '' });
       toast.success('Visit added successfully');
     } catch (error) {
       console.error('Error adding visit:', error);
@@ -103,7 +117,9 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
         .update({
           visit_date: visit.visit_date,
           work_done: visit.work_done,
-          attended_by: visit.attended_by
+          attended_by: visit.attended_by,
+          visit_status: visit.visit_status,
+          equipment_status: visit.equipment_status
         })
         .eq('id', visit.id);
 
@@ -205,6 +221,32 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                   placeholder="Name of attendee"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Visit Status</label>
+                <select
+                  value={newVisit.visit_status}
+                  onChange={(e) => setNewVisit({ ...newVisit, visit_status: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="">Select Status</option>
+                  {VISIT_STATUS_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Equipment Status</label>
+                <select
+                  value={newVisit.equipment_status}
+                  onChange={(e) => setNewVisit({ ...newVisit, equipment_status: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="">Select Status</option>
+                  {EQUIPMENT_STATUS_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <button
               type="button"
@@ -225,6 +267,8 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Work Done</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attended By</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Status</th>
                   {!isExpired && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   )}
@@ -269,6 +313,34 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                           />
                         </td>
+                        <td className="px-6 py-4">
+                          <select
+                            value={editingVisit.visit_status}
+                            onChange={(e) => setEditingVisit({
+                              ...editingVisit,
+                              visit_status: e.target.value
+                            })}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          >
+                            {VISIT_STATUS_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-6 py-4">
+                          <select
+                            value={editingVisit.equipment_status}
+                            onChange={(e) => setEditingVisit({
+                              ...editingVisit,
+                              equipment_status: e.target.value
+                            })}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          >
+                            {EQUIPMENT_STATUS_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                           <button
                             onClick={() => handleEditVisit(editingVisit)}
@@ -293,6 +365,8 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">{visit.work_done}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{visit.attended_by}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">{visit.visit_status}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">{visit.equipment_status}</td>
                         {!isExpired && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                             <button
@@ -327,7 +401,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                 ))}
                 {visitsList.length === 0 && (
                   <tr>
-                    <td colSpan={isExpired ? 3 : 4} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={isExpired ? 5 : 6} className="px-6 py-4 text-center text-sm text-gray-500">
                       No visits recorded
                     </td>
                   </tr>

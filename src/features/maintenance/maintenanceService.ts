@@ -23,7 +23,7 @@ export async function addMaintenance(maintenanceData: Partial<MaintenanceRecord>
 
 export async function updateMaintenance(maintenance: MaintenanceRecord) {
   try {
-    const { customer, equipments, visits, ...filteredData } = maintenance;
+    const { customer, equipment, visits, ...filteredData } = maintenance;
     const { error } = await supabase
       .from('maintenance_records')
       .update(filteredData)
