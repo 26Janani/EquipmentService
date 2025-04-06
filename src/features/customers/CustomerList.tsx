@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Customer } from '../../types';
 import { Pencil, Trash2, Users } from 'lucide-react';
 import { Pagination } from '../../components/Pagination';
@@ -23,6 +23,7 @@ export function CustomerList({
   onDelete,
   onAdd
 }: CustomerListProps) {
+  const [selectedRow, setSelectedRow] = useState<string | null>(null);
   return (
     <div className="bg-white shadow rounded-lg">
       <div className="px-4 py-5 sm:p-6">
@@ -50,7 +51,11 @@ export function CustomerList({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {customers.map((customer) => (
-                <tr key={customer.id}>
+                <tr key={customer.id}
+                  onClick={() => setSelectedRow(customer.id)}
+                  style={selectedRow === customer.id ? {
+                    backgroundColor: '#edf2f7'
+                  } : {}}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {customer.name}
                   </td>

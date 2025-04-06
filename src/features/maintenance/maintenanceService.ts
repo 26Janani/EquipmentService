@@ -71,7 +71,7 @@ export async function fetchMaintenanceRecords() {
       .from('maintenance_records')
       .select(`
         *,
-        equipments(*),
+        equipment:equipment_id(*),
         customer:customer_id(*),
         visits:maintenance_visits(*)
       `)

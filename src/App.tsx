@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { isSessionExpired } from './lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
-import { Customer, Equipments, MaintenanceRecord, MaintenanceFilters, PaginationState, MaintenanceVisit } from './types';
+import { Customer, Equipment, MaintenanceRecord, MaintenanceFilters, PaginationState, MaintenanceVisit } from './types';
 import { MaintenanceFilters as MaintenanceFiltersComponent } from './components/MaintenanceFilters';
 import { EditModal } from './components/EditModal';
 import { AddModal } from './components/AddModal';
@@ -24,16 +24,16 @@ import { exportAllData, exportFilteredMaintenanceRecords } from './utils/export'
 import { handleLogin, handleLogout, fetchData, checkAuthentication } from './features/auth/authService';
 
 function App() {
-  const [equipment, setEquipment] = useState<Equipments[]>([]);
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [filters, setFilters] = useState<MaintenanceFilters>({});
   const [editingItem, setEditingItem] = useState<{
     type: 'customer' | 'equipment' | 'maintenance';
-    data: Customer | Equipments | MaintenanceRecord;
+    data: Customer | Equipment | MaintenanceRecord;
   } | null>(null);
   const [addingType, setAddingType] = useState<'customer' | 'equipment' | 'maintenance' | null>(null);
-  const [activeTab, setActiveTab] = useState<'maintenance' | 'equipment' | 'customers'>('maintenance');
+  const [activeTab, setActiveTab] = useState<'maintenance' | 'equipments' | 'customers'>('maintenance');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
@@ -51,7 +51,7 @@ function App() {
     total: 0
   });
 
-  const [equipmentPagination, setEquipmentPagination] = useState<PaginationState>({
+  const [equipmentsPagination, setEquipmentsPagination] = useState<PaginationState>({
     page: 1,
     pageSize: 10,
     total: 0
@@ -77,7 +77,7 @@ function App() {
     const expired = await isSessionExpired();
     if (expired && isLoggedIn) {
       setIsLoggedIn(false);
-      setEquipment([]);
+      setEquipments([]);
       setCustomers([]);
       setMaintenanceRecords([]);
       toast.error('Session expired. Please log in again.');
@@ -116,10 +116,10 @@ function App() {
   async function loadData() {
     const data = await fetchData();
     if (data) {
-      setEquipment(data.equipment);
+      setEquipments(data.equipments);
       setCustomers(data.customers);
       setMaintenanceRecords(data.maintenanceRecords);
-      setEquipmentPagination(prev => ({ ...prev, total: data.equipmentPagination.total }));
+      setEquipmentsPagination(prev => ({ ...prev, total: data.equipmentsPagination.total }));
       setCustomersPagination(prev => ({ ...prev, total: data.customersPagination.total }));
       setPagination(prev => ({ ...prev, total: data.maintenancePagination.total }));
     }
@@ -139,7 +139,7 @@ function App() {
     const result = await handleLogout();
     if (result.success) {
       setIsLoggedIn(false);
-      setEquipment([]);
+      setEquipments([]);
       setCustomers([]);
       setMaintenanceRecords([]);
     }
@@ -157,7 +157,7 @@ function App() {
 
   const handleExport = () => {
     try {
-      exportAllData(customers, equipment, maintenanceRecords);
+      exportAllData(customers, equipments, maintenanceRecords);
       toast.success('Export successful');
     } catch (error) {
       console.error('Error exporting:', error);
@@ -170,9 +170,9 @@ function App() {
     customersPagination.page * customersPagination.pageSize
   );
 
-  const paginatedEquipment = equipment.slice(
-    (equipmentPagination.page - 1) * equipmentPagination.pageSize,
-    equipmentPagination.page * equipmentPagination.pageSize
+  const paginatedEquipment = equipments.slice(
+    (equipmentsPagination.page - 1) * equipmentsPagination.pageSize,
+    equipmentsPagination.page * equipmentsPagination.pageSize
   );
 
   const filteredMaintenanceRecords = filterMaintenanceRecords(maintenanceRecords, filters);
@@ -263,7 +263,7 @@ function App() {
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-semibold text-gray-900">
                 {activeTab === 'maintenance' && 'Maintenance Records'}
-                {activeTab === 'equipment' && 'Equipment Management'}
+                {activeTab === 'equipments' && 'Equipment Management'}
                 {activeTab === 'customers' && 'Customer Management'}
               </h1>
               {activeTab === 'maintenance' && (
@@ -277,7 +277,7 @@ function App() {
                     {isFiltersVisible ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />}
                   </button>
                   <button
-                    onClick={() => exportFilteredMaintenanceRecords(filteredMaintenanceRecords, filters, customers, equipment)}
+                    onClick={() => exportFilteredMaintenanceRecords(filteredMaintenanceRecords, filters, customers, equipments)}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     <Download className="h-5 w-5 mr-2" />
@@ -294,7 +294,7 @@ function App() {
                     filters={filters}
                     onFiltersChange={setFilters}
                     customers={customers}
-                    equipments={equipment}
+                    equipments={equipments}
                     maintenanceRecords={maintenanceRecords}
                   />
                 </div>
@@ -321,12 +321,12 @@ function App() {
               </>
             )}
 
-            {activeTab === 'equipment' && (
+            {activeTab === 'equipments' && (
               <EquipmentList
                 equipment={paginatedEquipment}
-                pagination={equipmentPagination}
-                onPageChange={(page) => setEquipmentPagination(prev => ({ ...prev, page }))}
-                onPageSizeChange={(pageSize) => setEquipmentPagination(prev => ({ ...prev, pageSize, page: 1 }))}
+                pagination={equipmentsPagination}
+                onPageChange={(page) => setEquipmentsPagination(prev => ({ ...prev, page }))}
+                onPageSizeChange={(pageSize) => setEquipmentsPagination(prev => ({ ...prev, pageSize, page: 1 }))}
                 onEdit={(equipment) => setEditingItem({ type: 'equipment', data: equipment })}
                 onDelete={async (id) => {
                   try {
@@ -376,7 +376,7 @@ function App() {
               if (editingItem.type === 'maintenance') {
                 await updateMaintenance(data as MaintenanceRecord);
               } else if (editingItem.type === 'equipment') {
-                await updateEquipment(data as Equipments);
+                await updateEquipment(data as Equipment);
               } else {
                 await updateCustomer(data as Customer);
               }
@@ -387,7 +387,7 @@ function App() {
             }
           }}
           customers={customers}
-          equipment={equipment}
+          equipments={equipments}
         />
       )}
 
@@ -397,7 +397,7 @@ function App() {
           onClose={() => setAddingType(null)}
           onSuccess={loadData}
           customers={customers}
-          equipments={equipment}
+          equipments={equipments}
         />
       )}
 

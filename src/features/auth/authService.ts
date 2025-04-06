@@ -5,10 +5,10 @@ import { fetchMaintenanceRecords } from '../maintenance/maintenanceService';
 import toast from 'react-hot-toast';
 
 export interface AuthState {
-  equipment: any[];
+  equipments: any[];
   customers: any[];
   maintenanceRecords: any[];
-  equipmentPagination: { total: number };
+  equipmentsPagination: { total: number };
   customersPagination: { total: number };
   maintenancePagination: { total: number };
 }
@@ -53,17 +53,17 @@ export async function handleLogout(): Promise<{ success: boolean; error?: string
 
 export async function fetchData(): Promise<AuthState | null> {
   try {
-    const [equipmentData, customersData, maintenanceData] = await Promise.all([
+    const [equipmentsData, customersData, maintenanceData] = await Promise.all([
       fetchEquipment(),
       fetchCustomers(),
       fetchMaintenanceRecords()
     ]);
 
     return {
-      equipment: equipmentData,
+      equipments: equipmentsData,
       customers: customersData,
       maintenanceRecords: maintenanceData,
-      equipmentPagination: { total: equipmentData.length },
+      equipmentsPagination: { total: equipmentsData.length },
       customersPagination: { total: customersData.length },
       maintenancePagination: { total: maintenanceData.length }
     };

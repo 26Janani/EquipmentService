@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Equipment } from '../../types';
 import { Pencil, Trash2, Wrench } from 'lucide-react';
 import { Pagination } from '../../components/Pagination';
@@ -23,6 +23,7 @@ export function EquipmentList({
   onDelete,
   onAdd
 }: EquipmentListProps) {
+  const [selectedRow, setSelectedRow] = useState<string | null>(null);
   return (
     <div className="bg-white shadow rounded-lg">
       <div className="px-4 py-5 sm:p-6">
@@ -48,7 +49,11 @@ export function EquipmentList({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {equipment.map((eq) => (
-                <tr key={eq.id}>
+                <tr key={eq.id}
+                  onClick={() => setSelectedRow(eq.id)}
+                  style={selectedRow === eq.id ? {
+                    backgroundColor: '#edf2f7'
+                  } : {}}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {eq.name}
                   </td>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Customer, Equipments } from '../types';
+import { Customer, Equipment } from '../types';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
@@ -10,7 +10,7 @@ interface AddModalProps {
   onClose: () => void;
   onSuccess: () => void;
   customers?: Customer[];
-  equipments?: Equipments[];
+  equipments?: Equipment[];
 }
 
 export function AddModal({ type, onClose, onSuccess, customers, equipments }: AddModalProps) {

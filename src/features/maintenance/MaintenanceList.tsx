@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MaintenanceRecord } from '../../types';
 import { Pencil, Trash2, Calendar, Eye } from 'lucide-react';
 import { Pagination } from '../../components/Pagination';
@@ -29,8 +29,9 @@ export function MaintenanceList({
   onViewVisits,
   isRecordExpired
 }: MaintenanceListProps) {
+  const [selectedRow, setSelectedRow] = useState<string | null>(null);
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden relative" style={{ zIndex: 0 }}>
+    <div className="bg-white shadow rounded-lg overflow-hidden">
       <div className="px-4 py-5 sm:p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg leading-6 font-medium text-gray-900">Maintenance Records</h3>
@@ -52,10 +53,10 @@ export function MaintenanceList({
 
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
-                
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Status</th>
-                
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Code</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Age</th>
@@ -63,7 +64,7 @@ export function MaintenanceList({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Number</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Amount</th>
-                
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -72,14 +73,18 @@ export function MaintenanceList({
               {records.map((record) => {
                 const expired = isRecordExpired(record);
                 return (
-                  <tr key={record.id}>
+                  <tr key={record.id}
+                    onClick={() => setSelectedRow(record.id)}
+                    style={selectedRow === record.id ? {
+                      backgroundColor: '#edf2f7'
+                    } : {}}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {record.customer.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.equipments.name}
+                      {record.equipment.name}
                     </td>
-                    
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.serial_no}
                     </td>
@@ -87,7 +92,7 @@ export function MaintenanceList({
                       {record.service_status}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.service_start_date && record.service_end_date 
+                      {record.service_start_date && record.service_end_date
                         ? `${format(new Date(record.service_start_date), 'PP')} - ${format(new Date(record.service_end_date), 'PP')}`
                         : ''}
                     </td>
@@ -102,14 +107,13 @@ export function MaintenanceList({
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
                         {expired ? 'Expired' : 'Active'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.equipments.model_number}
+                      {record.equipment.model_number}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {format(new Date(record.installation_date), 'PP')}

@@ -11,10 +11,10 @@ interface EditModalProps {
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
   customers?: Customer[];
-  equipment?: Equipment[];
+  equipments?: Equipment[];
 }
 
-export function EditModal({ type, data, onClose, onSave, customers, equipment }: EditModalProps) {
+export function EditModal({ type, data, onClose, onSave, customers, equipments }: EditModalProps) {
   const [formData, setFormData] = useState(data);
   const [selectedServiceStatus, setSelectedServiceStatus] = useState(
     type === 'maintenance' ? (data as MaintenanceRecord).service_status : ''
@@ -25,7 +25,8 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
     { value: 'CAMC', label: 'CAMC' },
     { value: 'AMC', label: 'AMC' },
     { value: 'CALIBRATION', label: 'CALIBRATION' },
-    { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' }
+    { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' },
+    { value: 'END OF LIFE', label: 'END OF LIFE' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +35,7 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
       if (type === 'maintenance') {
         let maintenanceData = { ...formData };
 
-        if (selectedServiceStatus === 'ONCALL SERVICE') {
+        if (selectedServiceStatus === 'ONCALL SERVICE' || selectedServiceStatus === 'END OF LIFE') {
           maintenanceData = {
             ...maintenanceData,
             service_start_date: null,
@@ -191,7 +192,7 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
           required
         >
           <option value="">Select Equipment</option>
-          {equipment?.map((eq) => (
+          {equipments?.map((eq) => (
             <option key={eq.id} value={eq.id}>
               {eq.name}
             </option>
@@ -242,7 +243,7 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
         />
       </div>
 
-      {selectedServiceStatus !== 'ONCALL SERVICE' && (
+      { (selectedServiceStatus !== 'ONCALL SERVICE' && selectedServiceStatus !== 'END OF LIFE') && (
         <>
           <div>
             <label className="block text-sm font-medium text-gray-700">Service Start Date</label>
