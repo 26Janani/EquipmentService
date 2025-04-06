@@ -17,7 +17,7 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
       if (visit.status === 'Scheduled') {
         return `Visit ${index + 1}: Status - ${visit.status}, Scheduled Date - ${visit.scheduledDate}`;
       } else {
-        return `Visit ${index + 1}: Status - ${visit.status}, Scheduled Date - ${visit.scheduledDate}, Visit Date - ${visit.visitDate} , Work - ${visit.work}, Equipment status - ${visit.equipmentStatus} (Attended by - ${visit.attendedBy})`;
+        return `Visit ${index + 1}: Status - ${visit.status}, Scheduled Date - ${visit.scheduledDate}, Visit Date - ${visit.visitDate} , Work - ${visit.work}, Equipment status - ${visit.equipmentStatus} (Attended by ${visit.attendedBy})`;
       }
     }).join('\n');
 
@@ -30,7 +30,13 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
     serviceEndDate.setHours(0, 0, 0, 0);
     currentDate.setHours(0, 0, 0, 0);
 
-    const recordStatus = serviceEndDate >= currentDate ? 'Active' : 'Expired';
+    const recordStatus = ['CALIBRATION', 'ONCALL SERVICE'].includes(record.service_status)
+    ? 'Active'
+    : record.service_status === 'END OF LIFE'
+      ? 'Expired'
+      : serviceEndDate >= currentDate
+        ? 'Active'
+        : 'Expired';
 
     return {
       'Customer Name': record.customer.name,

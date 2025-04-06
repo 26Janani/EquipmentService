@@ -8,6 +8,10 @@ export const calculateAgeInMonths = (date: string) => {
 };
 
 export const isRecordExpired = (record: MaintenanceRecord) => {
+  if(record.service_status === 'END OF LIFE')
+    return true;
+  if(record.service_status === 'ONCALL SERVICE' || record.service_status === 'CALIBRATION')
+    return false;
   const serviceEndDate = new Date(record.service_end_date);
   const currentDate = new Date();
   currentDate.setDate(currentDate.getDate() - 1)
