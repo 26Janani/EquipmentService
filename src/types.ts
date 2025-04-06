@@ -21,6 +21,7 @@ export interface Customer {
 export interface MaintenanceVisit {
   id: string;
   maintenance_record_id: string;
+  scheduled_date: string;
   visit_date: string;
   visit_status: string;
   equipment_status: string;
