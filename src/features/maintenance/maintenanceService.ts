@@ -24,6 +24,16 @@ export async function addMaintenance(maintenanceData: Partial<MaintenanceRecord>
 export async function updateMaintenance(maintenance: MaintenanceRecord) {
   try {
     const { customer, equipment, visits, ...filteredData } = maintenance;
+    
+    // Reset fields for specific service statuses
+    if (['CALIBRATION', 'ONCALL SERVICE', 'END OF LIFE'].includes(maintenance.service_status)) {
+      filteredData.service_start_date = null;
+      filteredData.service_end_date = null;
+      filteredData.invoice_number = null;
+      filteredData.invoice_date = null;
+      filteredData.amount = 0;
+    }
+
     const { error } = await supabase
       .from('maintenance_records')
       .update(filteredData)
