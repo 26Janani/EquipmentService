@@ -11,10 +11,10 @@ interface EditModalProps {
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
   customers?: Customer[];
-  equipment?: Equipment[];
+  equipments?: Equipment[];
 }
 
-export function EditModal({ type, data, onClose, onSave, customers, equipment }: EditModalProps) {
+export function EditModal({ type, data, onClose, onSave, customers, equipments }: EditModalProps) {
   const [formData, setFormData] = useState(data);
   const [selectedServiceStatus, setSelectedServiceStatus] = useState(
     type === 'maintenance' ? (data as MaintenanceRecord).service_status : ''
@@ -25,62 +25,52 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
     { value: 'CAMC', label: 'CAMC' },
     { value: 'AMC', label: 'AMC' },
     { value: 'CALIBRATION', label: 'CALIBRATION' },
-    { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' }
+    { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' },
+    { value: 'END OF LIFE', label: 'END OF LIFE' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-          // Validate service end date for maintenance records
-    if (type === 'maintenance') {
-      const serviceEndDate = new Date(formData.service_end_date);
-      const currentDate = new Date();
-      currentDate.setDate(currentDate.getDate() - 1)
-      
-      // Reset time part for accurate date comparison
-      serviceEndDate.setHours(0, 0, 0, 0);
-      currentDate.setHours(0, 0, 0, 0);
-
-      if (serviceEndDate < currentDate) {
-        toast.error('Service end date must be greater than or equal to current date');
-        return;
-      }
-    }
-    
-      let updateData = { ...formData };
-
       if (type === 'maintenance') {
-        const { customer, equipments, visits, ...filteredData } = updateData;
-        updateData = filteredData;
+        let maintenanceData = { ...formData };
 
-        // For ONCALL SERVICE, set default values for service dates and invoice details
-        if (selectedServiceStatus === 'ONCALL SERVICE') {
-          const today = new Date().toISOString().split('T')[0];
-          updateData = {
-            ...updateData,
-            invoice_number: 'N/A',
+        if (selectedServiceStatus === 'CALIBRATION' || selectedServiceStatus === 'ONCALL SERVICE' || selectedServiceStatus === 'END OF LIFE') {
+          maintenanceData = {
+            ...maintenanceData,
+            service_start_date: null,
+            service_end_date: null,
+            invoice_number: null,
             invoice_date: null,
             amount: 0
           };
+        } else {
+          // Validate service end date for non-ONCALL SERVICE records
+          const serviceEndDate = new Date(formData.service_end_date);
+          const currentDate = new Date();
+          currentDate.setDate(currentDate.getDate() - 1);
+          
+          serviceEndDate.setHours(0, 0, 0, 0);
+          currentDate.setHours(0, 0, 0, 0);
+
+          if (serviceEndDate < currentDate) {
+            toast.error('Service end date must be greater than or equal to current date');
+            return;
+          }
+
+          if (!formData.service_start_date || !formData.service_end_date) {
+            toast.error('Please fill in all required fields');
+            return;
+          }
+        }
+
+        if (!maintenanceData.customer_id || !maintenanceData.equipment_id || !maintenanceData.serial_no || !maintenanceData.installation_date || !maintenanceData.warranty_end_date || !maintenanceData.service_status) {
+          toast.error('Please fill in all required fields');
+          return;
         }
       }
 
-      const tableName = type === 'maintenance' 
-        ? 'maintenance_records' 
-        : type === 'equipment'
-        ? 'equipments'
-        : 'customers';
-
-      const { error } = await supabase
-        .from(tableName)
-        .update(updateData)
-        .eq('id', updateData.id);
-
-      if (error) throw error;
-
-      toast.success('Updated successfully');
-      onSave(updateData);
-      onClose();
+      await onSave(formData);
     } catch (error) {
       console.error('Error updating:', error);
       toast.error('Failed to update');
@@ -202,9 +192,9 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
           required
         >
           <option value="">Select Equipment</option>
-          {equipment?.map((eq) => (
+          {equipments?.map((eq) => (
             <option key={eq.id} value={eq.id}>
-              {eq.name} - {eq.model_number}
+              {eq.name}
             </option>
           ))}
         </select>
@@ -252,7 +242,10 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
           required
         />
       </div>
-      <div>
+
+      { (selectedServiceStatus === 'WARRANTY' || selectedServiceStatus === 'AMC' || selectedServiceStatus === 'CAMC') && (
+        <>
+          <div>
             <label className="block text-sm font-medium text-gray-700">Service Start Date</label>
             <input
               type="date"
@@ -272,9 +265,6 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
               required
             />
           </div>
-
-      {selectedServiceStatus !== 'ONCALL SERVICE' && (
-        <>
           <div>
             <label className="block text-sm font-medium text-gray-700">Invoice Number</label>
             <input
@@ -304,7 +294,6 @@ export function EditModal({ type, data, onClose, onSave, customers, equipment }:
               value={(formData as MaintenanceRecord)?.amount || ''}
               onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="Enter Invoice Amount"
               required
             />
           </div>

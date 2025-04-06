@@ -1,8 +1,8 @@
 import { supabase } from '../../lib/supabase';
-import { Equipments } from '../../types';
+import { Equipment } from '../../types';
 import toast from 'react-hot-toast';
 
-export async function addEquipment(equipmentData: Partial<Equipments>) {
+export async function addEquipment(equipmentData: Partial<Equipment>) {
   try {
     const { data, error } = await supabase
       .from('equipments')
@@ -20,7 +20,7 @@ export async function addEquipment(equipmentData: Partial<Equipments>) {
   }
 }
 
-export async function updateEquipment(equipment: Equipments) {
+export async function updateEquipment(equipment: Equipment) {
   try {
     const { error } = await supabase
       .from('equipments')

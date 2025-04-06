@@ -142,7 +142,7 @@ async function processAndSendEmails() {
         `;
 
        console.log("📧 Consolidated Email Content:", consolidatedEmailContent);
-       await sendEmail('jananisrinivasan11@gmail.com', `Automated Reminder: Upcoming Maintenance Renewals Summary`, consolidatedEmailContent);
+       await sendEmail('alpicdiagnostics@gmail.com', `Automated Reminder: Upcoming Maintenance Renewals Summary`, consolidatedEmailContent);
     }else {
         console.log("❌ No records found. Skipping sending email to company.");
     }
@@ -164,7 +164,7 @@ async function processAndSendEmails() {
 
 
             console.log(`Email sent for customer: ${customerName}`+emailContent);
-            await sendEmail('jananisrinivasan11@gmail.com', `Ensure Trouble-Free Performance – Renew Your AMC Today!`, emailContent);
+            await sendEmail('alpicdiagnostics@gmail.com', `Ensure Trouble-Free Performance – Renew Your AMC Today!`, emailContent);
         }
     }    
 }

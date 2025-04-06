@@ -3,18 +3,22 @@ import { MaintenanceRecord, MaintenanceFilters } from '../../types';
 export const calculateAgeInMonths = (date: string) => {
   const installDate = new Date(date);
   const now = new Date();
-  return (now.getFullYear() - installDate.getFullYear()) * 12 + 
-         (now.getMonth() - installDate.getMonth());
+  return (now.getFullYear() - installDate.getFullYear()) * 12 +
+    (now.getMonth() - installDate.getMonth());
 };
 
 export const isRecordExpired = (record: MaintenanceRecord) => {
+  if(record.service_status === 'END OF LIFE')
+    return true;
+  if(record.service_status === 'ONCALL SERVICE' || record.service_status === 'CALIBRATION')
+    return false;
   const serviceEndDate = new Date(record.service_end_date);
   const currentDate = new Date();
   currentDate.setDate(currentDate.getDate() - 1)
-  
+
   serviceEndDate.setHours(0, 0, 0, 0);
   currentDate.setHours(0, 0, 0, 0);
-  
+
   return serviceEndDate < currentDate;
 };
 
@@ -25,12 +29,6 @@ export const filterMaintenanceRecords = (
   return records.filter(record => {
     if (filters.customer_ids?.length && !filters.customer_ids.includes(record.customer_id)) return false;
     if (filters.equipment_ids?.length && !filters.equipment_ids.includes(record.equipment_id)) return false;
-
-    // Product Code filter
-    if (filters.model_number) {
-      const modelNumbers = filters.model_number.split(',');
-      if (!modelNumbers.includes(record.equipments.model_number)) return false;
-    }
 
     // Serial number filter
     if (filters.serial_no) {
@@ -74,41 +72,59 @@ export const filterMaintenanceRecords = (
       }
     }
 
-    // Service start date filter
-    if (filters.service_start_date_range?.[0] || filters.service_start_date_range?.[1]) {
+    // Service date filter
+    if (filters.service_date_range?.[0] || filters.service_date_range?.[1]) {
       const serviceStartDate = new Date(record.service_start_date);
       serviceStartDate.setHours(0, 0, 0, 0);
-
-      if (filters.service_start_date_range[0]) {
-        const startDate = new Date(filters.service_start_date_range[0]);
-        startDate.setHours(0, 0, 0, 0);
-        if (serviceStartDate < startDate) return false;
-      }
-
-      if (filters.service_start_date_range[1]) {
-        const endDate = new Date(filters.service_start_date_range[1]);
-        endDate.setHours(23, 59, 59, 999);
-        if (serviceStartDate > endDate) return false;
-      }
-    }
-
-    // Service end date filter
-    if (filters.service_end_date_range?.[0] || filters.service_end_date_range?.[1]) {
       const serviceEndDate = new Date(record.service_end_date);
       serviceEndDate.setHours(0, 0, 0, 0);
 
-      if (filters.service_end_date_range[0]) {
-        const startDate = new Date(filters.service_end_date_range[0]);
+      if (filters.service_date_range[0]) {
+        const startDate = new Date(filters.service_date_range[0]);
         startDate.setHours(0, 0, 0, 0);
-        if (serviceEndDate < startDate) return false;
+        if (serviceStartDate < startDate || serviceEndDate < startDate) return false;
       }
 
-      if (filters.service_end_date_range[1]) {
-        const endDate = new Date(filters.service_end_date_range[1]);
+      if (filters.service_date_range[1]) {
+        const endDate = new Date(filters.service_date_range[1]);
         endDate.setHours(23, 59, 59, 999);
-        if (serviceEndDate > endDate) return false;
+        if (serviceStartDate > endDate || serviceEndDate > endDate) return false;
       }
     }
+
+    // Visit status filter
+    if (filters.visit_statuses?.length) {
+      const hasMatchingVisit = record.visits?.some(visit =>
+        filters.visit_statuses!.includes(visit.visit_status)
+      );
+      if (!hasMatchingVisit) return false;
+    }
+
+    // Scheduled date filter
+    if (filters.scheduled_date_range?.[0] || filters.scheduled_date_range?.[1]) {
+      const startDate = filters.scheduled_date_range[0]
+        ? new Date(filters.scheduled_date_range[0])
+        : null;
+      const endDate = filters.scheduled_date_range[1]
+        ? new Date(filters.scheduled_date_range[1])
+        : null;
+
+      if (startDate) startDate.setHours(0, 0, 0, 0);
+      if (endDate) endDate.setHours(23, 59, 59, 999);
+
+      const hasMatchingScheduledVisit = record.visits?.some(visit => {
+        const scheduled = new Date(visit.scheduled_date);
+        scheduled.setHours(0, 0, 0, 0);
+
+        if (startDate && scheduled < startDate) return false;
+        if (endDate && scheduled > endDate) return false;
+
+        return true;
+      });
+
+      if (!hasMatchingScheduledVisit) return false;
+    }
+
 
     if (filters.service_statuses?.length && !filters.service_statuses.includes(record.service_status)) return false;
 

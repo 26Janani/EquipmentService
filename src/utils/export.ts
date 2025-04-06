@@ -5,14 +5,21 @@ import { format } from 'date-fns';
 function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
   return records.map(record => {
     const visitDetails = record.visits?.map(visit => ({
-      date: format(new Date(visit.visit_date), 'dd-MM-yyyy'),
+      status: visit.visit_status,
+      scheduledDate: format(new Date(visit.scheduled_date), 'dd-MM-yyyy'), 
+      visitDate: format(new Date(visit.visit_date), 'dd-MM-yyyy'),
       work: visit.work_done,
-      attendedBy: visit.attended_by
+      attendedBy: visit.attended_by,
+      equipmentStatus: visit.equipment_status
     })) || [];
 
-    const visitsFormatted = visitDetails.map((visit, index) => 
-      `Visit ${index + 1}: ${visit.date} - ${visit.work} (Attended by: ${visit.attendedBy})`
-    ).join('\n');
+    const visitsFormatted = visitDetails.map((visit, index) => {
+      if (visit.status === 'Scheduled') {
+        return `Visit ${index + 1}: Status - ${visit.status}, Scheduled Date - ${visit.scheduledDate}`;
+      } else {
+        return `Visit ${index + 1}: Status - ${visit.status}, Scheduled Date - ${visit.scheduledDate}, Visit Date - ${visit.visitDate} , Work - ${visit.work}, Equipment status - ${visit.equipmentStatus} (Attended by ${visit.attendedBy})`;
+      }
+    }).join('\n');
 
     // Calculate record status based on service end date
     const serviceEndDate = new Date(record.service_end_date);
@@ -23,12 +30,18 @@ function prepareMaintenanceDataForExport(records: MaintenanceRecord[]) {
     serviceEndDate.setHours(0, 0, 0, 0);
     currentDate.setHours(0, 0, 0, 0);
 
-    const recordStatus = serviceEndDate >= currentDate ? 'Active' : 'Expired';
+    const recordStatus = ['CALIBRATION', 'ONCALL SERVICE'].includes(record.service_status)
+    ? 'Active'
+    : record.service_status === 'END OF LIFE'
+      ? 'Expired'
+      : serviceEndDate >= currentDate
+        ? 'Active'
+        : 'Expired';
 
     return {
       'Customer Name': record.customer.name,
-      'Equipment Name': record.equipments.name,
-      'Product Code': record.equipments.model_number,
+      'Equipment Name': record.equipment.name,
+      'Product Code': record.equipment.model_number,
       'Serial Number': record.serial_no,
       'Installation Date': format(new Date(record.installation_date), 'dd-MM-yyyy'),
       'Age': calculateAge(record.installation_date),
@@ -126,7 +139,8 @@ function prepareFiltersDataForExport(
     ['Installation Date Range', filters.installation_date_range],
     ['Warranty End Date Range', filters.warranty_end_date_range],
     ['Service Start Date Range', filters.service_start_date_range],
-    ['Service End Date Range', filters.service_end_date_range]
+    ['Service End Date Range', filters.service_end_date_range],
+    ['Scheduled Date Range', filters.scheduled_date_range]
   ];
 
   dateRanges.forEach(([label, range]) => {
@@ -136,6 +150,11 @@ function prepareFiltersDataForExport(
       filterData.push([label, `${start} to ${end}`]);
     }
   });
+
+  //Visit Status
+    if (filters.visit_statuses?.length) {
+      filterData.push(['Visit Status', filters.visit_statuses.join(', ')]);
+    }
 
   return filterData;
 }

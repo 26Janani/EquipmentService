@@ -4,11 +4,11 @@ import { Wrench, Users, Calendar, Download, LogOut, ChevronLeft } from 'lucide-r
 interface SidebarProps {
   isSidebarOpen: boolean;
   isHoveringNav: boolean;
-  activeTab: 'maintenance' | 'equipment' | 'customers';
+  activeTab: 'maintenance' | 'equipments' | 'customers';
   handleMouseEnter: () => void;
   handleMouseLeave: () => void;
   setIsSidebarOpen: (open: boolean) => void;
-  setActiveTab: (tab: 'maintenance' | 'equipment' | 'customers') => void;
+  setActiveTab: (tab: 'maintenance' | 'equipments' | 'customers') => void;
   handleExport: () => void;
   handleLogout: () => void;
 }
@@ -63,9 +63,9 @@ export function Sidebar({
           </button>
 
           <button
-            onClick={() => setActiveTab('equipment')}
+            onClick={() => setActiveTab('equipments')}
             className={`w-full flex items-center space-x-2 px-4 py-2 rounded-md transition-colors duration-200
-              ${activeTab === 'equipment' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
+              ${activeTab === 'equipments' ? 'bg-blue-600 text-white' : 'hover:bg-gray-800'}`}
           >
             <Wrench className="h-5 w-5" />
             {(isSidebarOpen || isHoveringNav) && <span>Equipments</span>}

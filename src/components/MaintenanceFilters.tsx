@@ -8,7 +8,7 @@ interface MaintenanceFiltersProps {
   filters: MaintenanceFiltersType;
   onFiltersChange: (filters: MaintenanceFiltersType) => void;
   customers: Customer[];
-  equipment: Equipment[];
+  equipments: Equipment[];
   maintenanceRecords: MaintenanceRecord[];
 }
 
@@ -17,7 +17,8 @@ const SERVICE_STATUS_OPTIONS = [
   { value: 'CAMC', label: 'CAMC' },
   { value: 'AMC', label: 'AMC' },
   { value: 'CALIBRATION', label: 'CALIBRATION' },
-  { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' }
+  { value: 'ONCALL SERVICE', label: 'ONCALL SERVICE' },
+  { value: 'END OF LIFE', label: 'END OF LIFE' }
 ];
 
 const RECORD_STATUS_OPTIONS = [
@@ -25,21 +26,27 @@ const RECORD_STATUS_OPTIONS = [
   { value: 'expired', label: 'Expired' }
 ];
 
-export function MaintenanceFilters({ 
-  filters, 
-  onFiltersChange, 
-  customers = [], 
-  equipment = [], 
-  maintenanceRecords = [] 
+const VISIT_STATUS_OPTIONS = [
+  { value: 'Scheduled', label: 'Scheduled' },
+  { value: 'Attended', label: 'Attended' },
+  { value: 'Closed', label: 'Closed' }
+];
+
+export function MaintenanceFilters({
+  filters,
+  onFiltersChange,
+  customers = [],
+  equipments = [],
+  maintenanceRecords = []
 }: MaintenanceFiltersProps) {
   // Get unique model numbers from equipment
   const modelNumberOptions = React.useMemo(() => {
-    const uniqueModels = [...new Set(equipment.map(eq => eq.model_number))];
+    const uniqueModels = [...new Set(equipments.map(eq => eq.model_number))];
     return uniqueModels.map(model => ({
       value: model,
       label: model
     }));
-  }, [equipment]);
+  }, [equipments]);
 
   // Get unique serial numbers from maintenance records
   const serialNumberOptions = React.useMemo(() => {
@@ -111,9 +118,9 @@ export function MaintenanceFilters({
             isMulti
             value={filters.equipment_ids?.map(id => ({
               value: id,
-              label: equipment.find(e => e.id === id)?.name || ''
+              label: equipments.find(e => e.id === id)?.name || ''
             })) || null}
-            options={equipment.map(eq => ({
+            options={equipments.map(eq => ({
               value: eq.id,
               label: `${eq.name}`
             }))}
@@ -124,26 +131,6 @@ export function MaintenanceFilters({
             className="basic-multi-select"
             classNamePrefix="select"
             placeholder="Select equipment..."
-            isClearable
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Product Code</label>
-          <Select
-            isMulti
-            value={filters.model_number?.split(',').map(model => ({
-              value: model,
-              label: model
-            })) || null}
-            options={modelNumberOptions}
-            onChange={(selected) => onFiltersChange({
-              ...filters,
-              model_number: selected ? selected.map(option => option.value).join(',') : undefined
-            })}
-            className="basic-multi-select"
-            classNamePrefix="select"
-            placeholder="Select product codes..."
             isClearable
           />
         </div>
@@ -249,17 +236,37 @@ export function MaintenanceFilters({
         />
 
         <DateRangePicker
-          startDate={filters.service_start_date_range?.[0] || null}
-          endDate={filters.service_start_date_range?.[1] || null}
-          onChange={(dates) => onFiltersChange({ ...filters, service_start_date_range: dates })}
-          label="Service Start Date Range"
+          startDate={filters.service_date_range?.[0] || null}
+          endDate={filters.service_date_range?.[1] || null}
+          onChange={(dates) => onFiltersChange({ ...filters, service_date_range: dates })}
+          label="Service Date Range"
         />
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Visit Status</label>
+          <Select
+            isMulti
+            value={filters.visit_statuses?.map(status => ({
+              value: status,
+              label: status
+            })) || null}
+            options={VISIT_STATUS_OPTIONS}
+            onChange={(selected) => onFiltersChange({
+              ...filters,
+              visit_statuses: selected ? selected.map(option => option.value) : undefined
+            })}
+            className="basic-multi-select"
+            classNamePrefix="select"
+            placeholder="Select visit status..."
+            isClearable
+          />
+        </div>
+
         <DateRangePicker
-          startDate={filters.service_end_date_range?.[0] || null}
-          endDate={filters.service_end_date_range?.[1] || null}
-          onChange={(dates) => onFiltersChange({ ...filters, service_end_date_range: dates })}
-          label="Service End Date Range"
+          startDate={filters.scheduled_date_range?.[0] || null}
+          endDate={filters.scheduled_date_range?.[1] || null}
+          onChange={(dates) => onFiltersChange({ ...filters, scheduled_date_range: dates })}
+          label="Scheduled Date Range"
         />
       </div>
     </div>

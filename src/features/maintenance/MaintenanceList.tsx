@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MaintenanceRecord } from '../../types';
 import { Pencil, Trash2, Calendar, Eye } from 'lucide-react';
 import { Pagination } from '../../components/Pagination';
@@ -29,6 +29,7 @@ export function MaintenanceList({
   onViewVisits,
   isRecordExpired
 }: MaintenanceListProps) {
+  const [selectedRow, setSelectedRow] = useState<string | null>(null);
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       <div className="px-4 py-5 sm:p-6">
@@ -48,18 +49,22 @@ export function MaintenanceList({
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Code</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
+
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
+
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Status</th>
+
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Code</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Age</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty End Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Number</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Status</th>
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -68,44 +73,28 @@ export function MaintenanceList({
               {records.map((record) => {
                 const expired = isRecordExpired(record);
                 return (
-                  <tr key={record.id}>
+                  <tr key={record.id}
+                    onClick={() => setSelectedRow(record.id)}
+                    style={selectedRow === record.id ? {
+                      backgroundColor: '#edf2f7'
+                    } : {}}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {record.customer.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.equipments.name}
+                      {record.equipment.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.equipments.model_number}
-                    </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.serial_no}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(record.installation_date), 'PP')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {calculateAge(record.installation_date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(record.warranty_end_date), 'PP')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.service_status}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.service_start_date && record.service_end_date 
+                      {record.service_start_date && record.service_end_date
                         ? `${format(new Date(record.service_start_date), 'PP')} - ${format(new Date(record.service_end_date), 'PP')}`
                         : ''}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.invoice_number}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.invoice_date ? format(new Date(record.invoice_date), 'PP') : ''}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.amount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <button
@@ -118,29 +107,48 @@ export function MaintenanceList({
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
                         {expired ? 'Expired' : 'Active'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.equipment.model_number}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {format(new Date(record.installation_date), 'PP')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {calculateAge(record.installation_date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {format(new Date(record.warranty_end_date), 'PP')}
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.invoice_number}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.invoice_date ? format(new Date(record.invoice_date), 'PP') : ''}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.amount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.notes}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                       <button
-                        onClick={() => !expired && onEdit(record)}
-                        className={`inline-flex items-center ${expired ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-indigo-600 hover:text-indigo-900'}`}
-                        title={expired ? 'Cannot edit expired records' : 'Edit record'}
-                        disabled={expired}
+                        onClick={() => onEdit(record)}
+                        className="inline-flex items-center text-indigo-600 hover:text-indigo-900"
+                        title="Edit record"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => !expired && onDelete(record.id)}
-                        className={`inline-flex items-center ${expired ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-red-600 hover:text-red-900'}`}
-                        title={expired ? 'Cannot delete expired records' : 'Delete record'}
-                        disabled={expired}
+                        onClick={() => onDelete(record.id)}
+                        className="inline-flex items-center text-red-600 hover:text-red-900"
+                        title="Delete record"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
