@@ -35,12 +35,12 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments }
       if (type === 'maintenance') {
         let maintenanceData = { ...formData };
 
-        if (selectedServiceStatus === 'ONCALL SERVICE' || selectedServiceStatus === 'END OF LIFE') {
+        if (selectedServiceStatus === 'CALIBRATION' || selectedServiceStatus === 'ONCALL SERVICE' || selectedServiceStatus === 'END OF LIFE') {
           maintenanceData = {
             ...maintenanceData,
             service_start_date: null,
             service_end_date: null,
-            invoice_number: 'N/A',
+            invoice_number: null,
             invoice_date: null,
             amount: 0
           };
@@ -243,7 +243,7 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments }
         />
       </div>
 
-      { (selectedServiceStatus !== 'ONCALL SERVICE' && selectedServiceStatus !== 'END OF LIFE') && (
+      { (selectedServiceStatus === 'WARRANTY' || selectedServiceStatus === 'AMC' || selectedServiceStatus === 'CAMC') && (
         <>
           <div>
             <label className="block text-sm font-medium text-gray-700">Service Start Date</label>
