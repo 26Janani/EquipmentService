@@ -32,7 +32,8 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
     work_done: '',
     attended_by: '',
     visit_status: '',
-    equipment_status: ''
+    equipment_status: '',
+    comments: ''
   });
   const [editingVisit, setEditingVisit] = useState<MaintenanceVisit | null>(null);
   const [showAdditionalFields, setShowAdditionalFields] = useState(false);
@@ -124,7 +125,8 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
       work_done: newVisit.visit_status === 'Scheduled' ? null : newVisit.work_done,
       attended_by: newVisit.visit_status === 'Scheduled' ? null : newVisit.attended_by,
       visit_status: newVisit.visit_status,
-      equipment_status: newVisit.visit_status === 'Scheduled' ? 'Working' : newVisit.equipment_status
+      equipment_status: newVisit.visit_status === 'Scheduled' ? 'Working' : newVisit.equipment_status,
+      comments: newVisit.visit_status === 'Scheduled' ? null : newVisit.comments
     };
 
     try {
@@ -139,7 +141,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
       const updatedVisits = [...visitsList, data];
       setVisitsList(updatedVisits);
       onVisitChange(maintenanceId, updatedVisits);
-      setNewVisit({ scheduled_date: '', visit_date: '', work_done: '', attended_by: '', visit_status: '', equipment_status: '' });
+      setNewVisit({ scheduled_date: '', visit_date: '', work_done: '', attended_by: '', visit_status: '', equipment_status: '', comments: ''});
       toast.success('Visit added successfully');
     } catch (error) {
       console.error('Error adding visit:', error);
@@ -164,7 +166,8 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
         visit_status: visit.visit_status,
         work_done: visit.visit_status === 'Scheduled' ? null : visit.work_done,
         attended_by: visit.visit_status === 'Scheduled' ? null : visit.attended_by,
-        equipment_status: visit.visit_status === 'Scheduled' ? 'Working' : visit.equipment_status
+        equipment_status: visit.visit_status === 'Scheduled' ? 'Working' : visit.equipment_status,
+        comments: visit.visit_status === 'Scheduled' ? null : visit.comments
       };
 
       const { error } = await supabase
@@ -227,6 +230,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
           equipment_status: status === 'Scheduled' ? 'Working' : prev.equipment_status,
           visit_date: status === 'Scheduled' ? null : prev.visit_date,
           scheduled_date: prev.scheduled_date,
+          comments: status === 'Scheduled' ? null : prev.comments
         };
       });
     } else {
@@ -238,7 +242,8 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
         visit_date: '',
         work_done: '',
         attended_by: '',
-        equipment_status: status === 'Scheduled' ? 'Working' : ''
+        equipment_status: status === 'Scheduled' ? 'Working' : '',
+        comments: ''
       }));
     }
     setShowAdditionalFields(status !== 'Scheduled');
@@ -348,6 +353,17 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Comments</label>
+                    <input
+                      type="text"
+                      value={newVisit.comments}
+                      onChange={(e) => setNewVisit({ ...newVisit, comments: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Comments or notes"
+                      required
+                    />
+                  </div>
                 </>
               )}
             </div>
@@ -373,6 +389,7 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Work Done</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attended By</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comments</th>
                   {!isExpired && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   )}
@@ -472,6 +489,20 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                             </select>
                           )}
                         </td>
+                        <td className="px-6 py-4">
+                          {editingVisit.visit_status !== 'Scheduled' && (
+                            <input
+                              type="text"
+                              value={editingVisit.comments || ''}
+                              onChange={(e) => setEditingVisit({
+                                ...editingVisit,
+                                comments: e.target.value
+                              })}
+                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                              required
+                            />
+                          )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                           <button
                             onClick={() => handleEditVisit(editingVisit)}
@@ -509,6 +540,9 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {visit.visit_status !== 'Scheduled' ? visit.equipment_status : ''}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {visit.visit_status !== 'Scheduled' ? visit.comments : ''}
                         </td>
                         {!isExpired && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">

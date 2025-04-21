@@ -27,6 +27,7 @@ export interface MaintenanceVisit {
   equipment_status: string;
   work_done: string;
   attended_by: string;
+  comments?: string;
   created_at?: string;
   updated_at?: string;
 }

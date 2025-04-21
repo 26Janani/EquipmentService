@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React , { useState } from 'react';
 import { MaintenanceRecord } from '../../types';
 import { Pencil, Trash2, Calendar, Eye } from 'lucide-react';
 import { Pagination } from '../../components/Pagination';
 import { PaginationState } from '../../types';
-import { format } from 'date-fns';
+import { format, compareAsc } from 'date-fns';
 import { calculateAge } from '../../utils/age';
 
 interface MaintenanceListProps {
@@ -30,6 +30,26 @@ export function MaintenanceList({
   isRecordExpired
 }: MaintenanceListProps) {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
+
+  // Helper function to get the next scheduled visit date
+  const getNextVisitDate = (visits) => {
+    const now = new Date();
+    // Filter for scheduled visits with dates in the future
+    const futureScheduledVisits = visits
+      .filter(visit =>
+        visit.visit_status === 'Scheduled' &&
+        visit.scheduled_date &&
+        new Date(visit.scheduled_date) > now
+      )
+      // Sort by date, ascending (earliest first)
+      .sort((a, b) => compareAsc(new Date(a.scheduled_date), new Date(b.scheduled_date)));
+    // Return the earliest future date if available
+    if (futureScheduledVisits.length > 0) {
+      return format(new Date(futureScheduledVisits[0].scheduled_date), 'PP');
+    }
+    return 'No upcoming visits';
+  };
+
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       <div className="px-4 py-5 sm:p-6">
@@ -50,13 +70,11 @@ export function MaintenanceList({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
-
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
-
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Next Visit Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Status</th>
-
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Code</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Age</th>
@@ -64,7 +82,6 @@ export function MaintenanceList({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Number</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Amount</th>
-
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -84,7 +101,6 @@ export function MaintenanceList({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.equipment.name}
                     </td>
-
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.serial_no}
                     </td>
@@ -95,6 +111,11 @@ export function MaintenanceList({
                       {record.service_start_date && record.service_end_date
                         ? `${format(new Date(record.service_start_date), 'PP')} - ${format(new Date(record.service_end_date), 'PP')}`
                         : ''}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.visits && record.visits.length > 0
+                        ? getNextVisitDate(record.visits)
+                        : 'No visits'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <button
