@@ -37,6 +37,7 @@ export interface MaintenanceRecord {
   equipment_id: string;
   customer_id: string;
   serial_no: string;
+  equipment_purchase_value: number;
   installation_date: string;
   warranty_end_date: string;
   invoice_date: string;
