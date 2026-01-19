@@ -21,7 +21,8 @@ import {
 } from './features/maintenance/maintenanceService';
 import { filterMaintenanceRecords, isRecordExpired } from './features/maintenance/maintenanceFilters';
 import { exportAllData, exportFilteredMaintenanceRecords } from './utils/export';
-import { handleLogin, handleLogout, fetchData, checkAuthentication } from './features/auth/authService';
+import { handleLogin, handleLogout, fetchData, checkAuthentication, getUserRole } from './features/auth/authService';
+import { ServiceContractHistoryModal } from './components/ServiceContractHistoryModal';
 
 function App() {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -44,6 +45,7 @@ function App() {
   });
   const [editingVisits, setEditingVisits] = useState<MaintenanceRecord | null>(null);
   const [isHoveringNav, setIsHoveringNav] = useState(false);
+  const [userRole, setUserRole] = useState<string>('user');
 
   const [customersPagination, setCustomersPagination] = useState<PaginationState>({
     page: 1,
@@ -56,6 +58,10 @@ function App() {
     pageSize: 10,
     total: 0
   });
+
+  const [renewData, setRenewData] = useState<MaintenanceRecord | null>(null);
+  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [serviceHistoryModal, setServiceHistoryModal] = useState<{ open: boolean, history: any[] }>({ open: false, history: [] });
 
   const handleMouseEnter = () => {
     if (!isSidebarOpen) {
@@ -109,6 +115,8 @@ function App() {
     const authenticated = await checkAuthentication();
     setIsLoggedIn(authenticated);
     if (authenticated) {
+      const role = await getUserRole();
+      setUserRole(role);
       loadData();
     }
   }
@@ -131,6 +139,8 @@ function App() {
     const result = await handleLogin(formData);
     if (result.success) {
       setIsLoggedIn(true);
+      const role = await getUserRole();
+      setUserRole(role);
       loadData();
     }
   };
@@ -185,6 +195,18 @@ function App() {
     (pagination.page - 1) * pagination.pageSize,
     pagination.page * pagination.pageSize
   );
+
+  const handleRenewMaintenance = (record: MaintenanceRecord) => {
+    setRenewData(record);
+    setShowRenewModal(true);
+  };
+
+  const handleShowServiceHistory = (record: MaintenanceRecord) => {
+    setServiceHistoryModal({
+      open: true,
+      history: record.service_contracts || []
+    });
+  };
 
   if (!isLoggedIn) {
     return (
@@ -304,9 +326,10 @@ function App() {
                   onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
                   onPageSizeChange={(pageSize) => setPagination(prev => ({ ...prev, pageSize, page: 1 }))}
                   onEdit={(record) => setEditingItem({ type: 'maintenance', data: record })}
+                  onRenew={handleRenewMaintenance}
                   onDelete={async (id) => {
                     try {
-                      const deleted = await deleteMaintenance(id);
+                      const deleted = await deleteMaintenance(id, userRole);
                       if (deleted) {
                         loadData();
                       }
@@ -316,7 +339,9 @@ function App() {
                   }}
                   onAdd={() => setAddingType('maintenance')}
                   onViewVisits={(record) => setEditingVisits(record)}
+                  onShowServiceHistory={handleShowServiceHistory}
                   isRecordExpired={isRecordExpired}
+                  currentUserRole={userRole}
                 />
               </>
             )}
@@ -330,7 +355,7 @@ function App() {
                 onEdit={(equipment) => setEditingItem({ type: 'equipment', data: equipment })}
                 onDelete={async (id) => {
                   try {
-                    const deleted = await deleteEquipment(id);
+                    const deleted = await deleteEquipment(id, userRole);
                     if (deleted) {
                       loadData();
                     }
@@ -339,6 +364,7 @@ function App() {
                   }
                 }}
                 onAdd={() => setAddingType('equipment')}
+                currentUserRole={userRole}
               />
             )}
 
@@ -351,7 +377,7 @@ function App() {
                 onEdit={(customer) => setEditingItem({ type: 'customer', data: customer })}
                 onDelete={async (id) => {
                   try {
-                    const deleted = await deleteCustomer(id);
+                    const deleted = await deleteCustomer(id, userRole);
                     if (deleted) {
                       loadData();
                     }
@@ -360,6 +386,7 @@ function App() {
                   }
                 }}
                 onAdd={() => setAddingType('customer')}
+                currentUserRole={userRole}
               />
             )}
           </div>
@@ -388,16 +415,21 @@ function App() {
           }}
           customers={customers}
           equipments={equipments}
+          currentUserRole={userRole}
         />
       )}
 
       {addingType && (
         <AddModal
           type={addingType}
-          onClose={() => setAddingType(null)}
+          onClose={() => {
+            setAddingType(null);
+            setRenewData(null);
+          }}
           onSuccess={loadData}
           customers={customers}
           equipments={equipments}
+          currentUserRole={userRole}
         />
       )}
 
@@ -408,6 +440,62 @@ function App() {
           onClose={() => setEditingVisits(null)}
           onVisitChange={handleVisitChange}
           isExpired={isRecordExpired(editingVisits)}
+          currentUserRole={userRole}
+        />
+      )}
+
+      {showRenewModal && renewData && (
+        <EditModal
+          type="maintenance"
+          data={{
+            ...renewData,
+            // Keep the same id to update the same record
+            service_status: '',
+            service_start_date: '',
+            service_end_date: '',
+            invoice_number: '',
+            invoice_date: '',
+            amount: 0,
+            notes: '',
+            // Store old service contract in service_contracts
+            service_contracts: [
+              ...(renewData.service_contracts || []),
+              {
+                service_status: renewData.service_status,
+                service_start_date: renewData.service_start_date,
+                service_end_date: renewData.service_end_date,
+                invoice_number: renewData.invoice_number,
+                invoice_date: renewData.invoice_date,
+                amount: renewData.amount,
+                notes: renewData.notes
+              } as any
+            ]
+          }}
+          onClose={() => {
+            setShowRenewModal(false);
+            setRenewData(null);
+          }}
+          onSave={async (data) => {
+            try {
+              // Update the same maintenance record with new service data and updated service_contracts
+              await updateMaintenance(data as MaintenanceRecord);
+              loadData();
+              setShowRenewModal(false);
+              setRenewData(null);
+            } catch (error) {
+              // Error is already handled in the service
+            }
+          }}
+          customers={customers}
+          equipments={equipments}
+          currentUserRole={userRole}
+        />
+      )}
+
+      {serviceHistoryModal.open && (
+        <ServiceContractHistoryModal
+          history={serviceHistoryModal.history}
+          onClose={() => setServiceHistoryModal({ open: false, history: [] })}
         />
       )}
     </div>

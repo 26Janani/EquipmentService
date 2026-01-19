@@ -12,6 +12,7 @@ interface CustomerListProps {
   onEdit: (customer: Customer) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
+  currentUserRole: string; // 'admin' or 'user'
 }
 
 export function CustomerList({
@@ -21,7 +22,8 @@ export function CustomerList({
   onPageSizeChange,
   onEdit,
   onDelete,
-  onAdd
+  onAdd,
+  currentUserRole
 }: CustomerListProps) {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   return (
@@ -79,13 +81,15 @@ export function CustomerList({
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => onDelete(customer.id)}
-                      className="inline-flex items-center text-red-600 hover:text-red-900"
-                      title="Delete customer"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {currentUserRole === 'admin' && (
+                      <button
+                        onClick={() => onDelete(customer.id)}
+                        className="inline-flex items-center text-red-600 hover:text-red-900"
+                        title="Delete customer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

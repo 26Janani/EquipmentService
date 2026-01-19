@@ -1,6 +1,6 @@
 import React , { useState } from 'react';
 import { MaintenanceRecord } from '../../types';
-import { Pencil, Trash2, Calendar, Eye } from 'lucide-react';
+import { Pencil, Trash2, Calendar, Eye, PlusCircle } from 'lucide-react';
 import { Pagination } from '../../components/Pagination';
 import { PaginationState } from '../../types';
 import { format, compareAsc } from 'date-fns';
@@ -15,7 +15,10 @@ interface MaintenanceListProps {
   onDelete: (id: string) => void;
   onAdd: () => void;
   onViewVisits: (record: MaintenanceRecord) => void;
+  onRenew: (record: MaintenanceRecord) => void;
   isRecordExpired: (record: MaintenanceRecord) => boolean;
+  currentUserRole: string; // 'admin' or 'user'
+  onShowServiceHistory: (record: MaintenanceRecord) => void;
 }
 
 export function MaintenanceList({
@@ -27,7 +30,10 @@ export function MaintenanceList({
   onDelete,
   onAdd,
   onViewVisits,
-  isRecordExpired
+  onRenew,
+  isRecordExpired,
+  currentUserRole,
+  onShowServiceHistory
 }: MaintenanceListProps) {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
 
@@ -77,12 +83,13 @@ export function MaintenanceList({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Code</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Purchase Value</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation/ Warranty Start Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Age</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty End Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Number</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Contract History</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -160,9 +167,26 @@ export function MaintenanceList({
                       {record.amount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button
+                        onClick={() => onShowServiceHistory(record)}
+                        className="inline-flex items-center text-blue-600 hover:text-blue-900"
+                        title="View Service Contract History"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        <span>{record.service_contracts?.length || 0}</span>
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.notes}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
+                      <button
+                        onClick={() => onRenew(record)}
+                        className="inline-flex items-center text-green-600 hover:text-green-900"
+                        title="Add/Renew service record"
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => onEdit(record)}
                         className="inline-flex items-center text-indigo-600 hover:text-indigo-900"
@@ -170,13 +194,15 @@ export function MaintenanceList({
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => onDelete(record.id)}
-                        className="inline-flex items-center text-red-600 hover:text-red-900"
-                        title="Delete record"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {currentUserRole === 'admin' && (
+                        <button
+                          onClick={() => onDelete(record.id)}
+                          className="inline-flex items-center text-red-600 hover:text-red-900"
+                          title="Delete record"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

@@ -37,6 +37,13 @@ export const isSessionExpired = async () => {
   return Date.now() / 1000 >= expiresAt;
 };
 
+// Helper function to get current user's role
+export const getCurrentUserRole = async (): Promise<string> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  // Default to 'user' if not set
+  return user?.user_metadata?.role || 'user';
+};
+
 // Admin credentials
 export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 export const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;

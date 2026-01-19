@@ -12,6 +12,7 @@ interface EquipmentListProps {
   onEdit: (equipment: Equipment) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
+  currentUserRole: string; // 'admin' or 'user'
 }
 
 export function EquipmentList({
@@ -21,7 +22,8 @@ export function EquipmentList({
   onPageSizeChange,
   onEdit,
   onDelete,
-  onAdd
+  onAdd,
+  currentUserRole
 }: EquipmentListProps) {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   return (
@@ -71,13 +73,15 @@ export function EquipmentList({
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => onDelete(eq.id)}
-                      className="inline-flex items-center text-red-600 hover:text-red-900"
-                      title="Delete equipment"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {currentUserRole === 'admin' && (
+                      <button
+                        onClick={() => onDelete(eq.id)}
+                        className="inline-flex items-center text-red-600 hover:text-red-900"
+                        title="Delete equipment"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

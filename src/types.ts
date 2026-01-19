@@ -50,6 +50,7 @@ export interface MaintenanceRecord {
   equipment: Equipment;
   customer: Customer;
   visits?: MaintenanceVisit[];
+  service_contracts?: any[];
   created_at?: string;
   updated_at?: string;
 }

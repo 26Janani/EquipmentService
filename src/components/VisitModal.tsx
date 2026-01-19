@@ -11,6 +11,7 @@ interface VisitModalProps {
   onClose: () => void;
   onVisitChange: (maintenanceId: string, visits: MaintenanceVisit[]) => void;
   isExpired: boolean;
+  currentUserRole: string; // 'admin' or 'user'
 }
 
 const VISIT_STATUS_OPTIONS = [
@@ -24,7 +25,7 @@ const EQUIPMENT_STATUS_OPTIONS = [
   { value: 'Working', label: 'Working' }
 ];
 
-export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isExpired }: VisitModalProps) {
+export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isExpired, currentUserRole }: VisitModalProps) {
   const [visitsList, setVisitsList] = useState<MaintenanceVisit[]>(visits || []);
   const [newVisit, setNewVisit] = useState({
     scheduled_date: '',
@@ -109,10 +110,6 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
   };
 
   const handleAddVisit = async () => {
-    if (isExpired) {
-      toast.error('Cannot add visits to expired records');
-      return;
-    }
 
     if (!validateVisitData(newVisit)) {
       return;
@@ -150,10 +147,6 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
   };
 
   const handleEditVisit = async (visit: MaintenanceVisit) => {
-    if (isExpired) {
-      toast.error('Cannot edit visits of expired records');
-      return;
-    }
 
     if (!validateVisitData(visit, true)) {
       return;
@@ -190,8 +183,9 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
   };
 
   const handleRemoveVisit = async (visitId: string) => {
-    if (isExpired) {
-      toast.error('Cannot delete visits from expired records');
+    // Only allow delete for admin
+    if (currentUserRole !== 'admin') {
+      toast.error('Only admin can delete visits.');
       return;
     }
 
@@ -267,115 +261,114 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
         {isExpired && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
             <p className="text-red-700">
-              This maintenance record has expired. Visit history is available in read-only mode.
+              This maintenance record has expired. Visit history is available in read-only mode except for adding new visits.
             </p>
           </div>
         )}
 
-        {!isExpired && (
-          <div className="mb-6">
-            <h3 className="text-lg font-medium mb-2">Add New Visit</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Visit Status</label>
-                <select
-                  value={newVisit.visit_status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                >
-                  <option value="">Select Status</option>
-                  {VISIT_STATUS_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
+        {/* Always show Add New Visit section, regardless of isExpired */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">Add New Visit</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Visit Status</label>
+              <select
+                value={newVisit.visit_status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              >
+                <option value="">Select Status</option>
+                {VISIT_STATUS_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
 
-              {newVisit.visit_status === 'Scheduled' && (
+            {newVisit.visit_status === 'Scheduled' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Scheduled Date</label>
+                <input
+                  type="date"
+                  value={newVisit.scheduled_date}
+                  onChange={(e) => setNewVisit({ ...newVisit, scheduled_date: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  // min={new Date().toISOString().split('T')[0]}
+                  required
+                />
+              </div>
+            )}
+
+            {newVisit.visit_status !== 'Scheduled' && newVisit.visit_status !== '' && (
+              <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Scheduled Date</label>
+                  <label className="block text-sm font-medium text-gray-700">Visit Date</label>
                   <input
                     type="date"
-                    value={newVisit.scheduled_date}
-                    onChange={(e) => setNewVisit({ ...newVisit, scheduled_date: e.target.value })}
+                    value={newVisit.visit_date}
+                    onChange={(e) => setNewVisit({ ...newVisit, visit_date: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     // min={new Date().toISOString().split('T')[0]}
                     required
                   />
                 </div>
-              )}
-
-              {newVisit.visit_status !== 'Scheduled' && newVisit.visit_status !== '' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Visit Date</label>
-                    <input
-                      type="date"
-                      value={newVisit.visit_date}
-                      onChange={(e) => setNewVisit({ ...newVisit, visit_date: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      // min={new Date().toISOString().split('T')[0]}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Work Done</label>
-                    <input
-                      type="text"
-                      value={newVisit.work_done}
-                      onChange={(e) => setNewVisit({ ...newVisit, work_done: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="Description of work done"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Attended By</label>
-                    <input
-                      type="text"
-                      value={newVisit.attended_by}
-                      onChange={(e) => setNewVisit({ ...newVisit, attended_by: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="Name of attendee"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Equipment Status</label>
-                    <select
-                      value={newVisit.equipment_status}
-                      onChange={(e) => setNewVisit({ ...newVisit, equipment_status: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      required
-                    >
-                      <option value="">Select Status</option>
-                      {EQUIPMENT_STATUS_OPTIONS.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Comments</label>
-                    <input
-                      type="text"
-                      value={newVisit.comments}
-                      onChange={(e) => setNewVisit({ ...newVisit, comments: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="Comments or notes"
-                      required
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={handleAddVisit}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Add Visit
-            </button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Work Done</label>
+                  <input
+                    type="text"
+                    value={newVisit.work_done}
+                    onChange={(e) => setNewVisit({ ...newVisit, work_done: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    placeholder="Description of work done"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Attended By</label>
+                  <input
+                    type="text"
+                    value={newVisit.attended_by}
+                    onChange={(e) => setNewVisit({ ...newVisit, attended_by: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    placeholder="Name of attendee"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Equipment Status</label>
+                  <select
+                    value={newVisit.equipment_status}
+                    onChange={(e) => setNewVisit({ ...newVisit, equipment_status: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    required
+                  >
+                    <option value="">Select Status</option>
+                    {EQUIPMENT_STATUS_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Comments</label>
+                  <input
+                    type="text"
+                    value={newVisit.comments}
+                    onChange={(e) => setNewVisit({ ...newVisit, comments: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    placeholder="Comments or notes"
+                    required
+                  />
+                </div>
+              </>
+            )}
           </div>
-        )}
+          <button
+            type="button"
+            onClick={handleAddVisit}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Add Visit
+          </button>
+        </div>
 
         <div>
           <h3 className="text-lg font-medium mb-2">Visit History ({visitsList.length} visits)</h3>
@@ -390,15 +383,15 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attended By</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipment Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comments</th>
-                  {!isExpired && (
+                  {/* {!isExpired && ( */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  )}
+                  {/* )} */}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {visitsList.map((visit) => (
                   <tr key={visit.id}>
-                    {editingVisit?.id === visit.id && !isExpired ? (
+                    {editingVisit?.id === visit.id && (!isExpired || currentUserRole === 'admin') ? (
                       <>
                         <td className="px-6 py-4">
                           <select
@@ -544,47 +537,38 @@ export function VisitModal({ maintenanceId, visits, onClose, onVisitChange, isEx
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {visit.visit_status !== 'Scheduled' ? visit.comments : ''}
                         </td>
-                        {!isExpired && (
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
+                          <button
+                            onClick={() => {
+                              // Allow edit for admin even if expired, or for non-expired records
+                              if (visit.visit_status === 'Scheduled' || !isNonScheduledPastVisit(visit) || !isExpired || currentUserRole === 'admin') {
+                                setEditingVisit(visit);
+                              }
+                            }}
+                            className={`inline-flex items-center ${
+                              (!isNonScheduledPastVisit(visit) || !isExpired || currentUserRole === 'admin')
+                                ? 'text-indigo-600 hover:text-indigo-900'
+                                : 'opacity-50 cursor-not-allowed text-gray-400'
+                            }`}
+                            title={
+                              (!isNonScheduledPastVisit(visit) || !isExpired || currentUserRole === 'admin')
+                                ? 'Edit visit'
+                                : 'Cannot edit visits for expired records'
+                            }
+                            disabled={isNonScheduledPastVisit(visit) && isExpired && currentUserRole !== 'admin'}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          {currentUserRole === 'admin' && (
                             <button
-                              onClick={() => {
-                                // Always allow editing of scheduled visits
-                                if (visit.visit_status === 'Scheduled' || !isNonScheduledPastVisit(visit)) {
-                                  console.log('Setting editing visit with date:', visit.scheduled_date);
-                                  setEditingVisit(visit);
-                                }
-                              }}
-                              className={`inline-flex items-center ${
-                                // Disable editing for non-scheduled visits in the past
-                                isNonScheduledPastVisit(visit)
-                                  ? 'opacity-50 cursor-not-allowed text-gray-400'
-                                  : 'text-indigo-600 hover:text-indigo-900'
-                                }`}
-                              title={isNonScheduledPastVisit(visit) ? 'Cannot edit past non-scheduled visits' : 'Edit visit'}
-                              disabled={isNonScheduledPastVisit(visit)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                // Allow deleting scheduled visits regardless of date
-                                if (visit.visit_status === 'Scheduled' || !isNonScheduledPastVisit(visit)) {
-                                  handleRemoveVisit(visit.id);
-                                }
-                              }}
-                              className={`inline-flex items-center ${
-                                // Disable deletion for non-scheduled visits in the past
-                                isNonScheduledPastVisit(visit)
-                                  ? 'opacity-50 cursor-not-allowed text-gray-400'
-                                  : 'text-red-600 hover:text-red-900'
-                                }`}
-                              title={isNonScheduledPastVisit(visit) ? 'Cannot delete past non-scheduled visits' : 'Delete visit'}
-                              disabled={isNonScheduledPastVisit(visit)}
+                              onClick={() => handleRemoveVisit(visit.id)}
+                              className="inline-flex items-center text-red-600 hover:text-red-900"
+                              title="Delete visit"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
-                          </td>
-                        )}
+                          )}
+                        </td>
                       </>
                     )}
                   </tr>
