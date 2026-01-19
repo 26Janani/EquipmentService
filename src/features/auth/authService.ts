@@ -1,4 +1,4 @@
-import { supabase, isAuthenticated as checkAuth, ADMIN_EMAIL, ADMIN_PASSWORD } from '../../lib/supabase';
+import { supabase, isAuthenticated as checkAuth, ADMIN_EMAIL, ADMIN_PASSWORD, getCurrentUserRole } from '../../lib/supabase';
 import { fetchEquipment } from '../equipment/equipmentService';
 import { fetchCustomers } from '../customers/customerService';
 import { fetchMaintenanceRecords } from '../maintenance/maintenanceService';
@@ -16,26 +16,36 @@ export interface AuthState {
 export async function handleLogin(formData: FormData): Promise<{ success: boolean; error?: string }> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
-  
-  if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-    toast.error('Invalid credentials. Please use admin credentials.');
-    return { success: false, error: 'Invalid credentials' };
-  }
-  
+
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
+    if (error) {
+      toast.error(error.message || 'Invalid credentials. Please use valid credentials.');
+      return { success: false, error: error.message };
+    }
+
+    // Set admin role in user metadata if admin credentials
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      await supabase.auth.updateUser({
+        data: { role: 'admin' }
+      });
+    } else {
+      await supabase.auth.updateUser({
+        data: { role: 'user' }
+      });
+    }
 
     toast.success('Logged in successfully');
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
+    // Always show a toast for any error
+    toast.error(error?.message || 'Failed to log in. Please try again.');
     console.error('Error logging in:', error);
-    toast.error('Failed to log in. Please try again.');
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || 'Unknown error' };
   }
 }
 
@@ -80,4 +90,9 @@ export async function fetchData(): Promise<AuthState | null> {
 
 export async function checkAuthentication(): Promise<boolean> {
   return await checkAuth();
+}
+
+// Helper to get current user role
+export async function getUserRole(): Promise<string> {
+  return await getCurrentUserRole();
 }

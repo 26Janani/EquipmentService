@@ -36,8 +36,13 @@ export async function updateCustomer(customer: Customer) {
   }
 }
 
-export async function deleteCustomer(id: string) {
+export async function deleteCustomer(id: string, currentUserRole: string) {
   try {
+    if (currentUserRole !== 'admin') {
+      toast.error('You do not have permission to delete customers.');
+      return false;
+    }
+
     // Check for related maintenance records
     const { data: relatedRecords } = await supabase
       .from('maintenance_records')

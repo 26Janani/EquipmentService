@@ -36,8 +36,12 @@ export async function updateEquipment(equipment: Equipment) {
   }
 }
 
-export async function deleteEquipment(id: string) {
+export async function deleteEquipment(id: string, currentUserRole: string) {
   try {
+    if (currentUserRole !== 'admin') {
+      toast.error('You do not have permission to delete equipment.');
+      return false;
+    }
     // Check for related maintenance records
     const { data: relatedRecords } = await supabase
       .from('maintenance_records')

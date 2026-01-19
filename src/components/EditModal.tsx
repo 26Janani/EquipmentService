@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Customer, Equipment, MaintenanceRecord } from '../types';
 import Select from 'react-select';
 import { X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 interface EditModalProps {
@@ -12,10 +11,27 @@ interface EditModalProps {
   onSave: (data: any) => Promise<void>;
   customers?: Customer[];
   equipments?: Equipment[];
+  currentUserRole?: string; // 'admin' or 'user'
 }
 
-export function EditModal({ type, data, onClose, onSave, customers, equipments }: EditModalProps) {
-  const [formData, setFormData] = useState(data);
+export function EditModal({ type, data, onClose, onSave, customers, equipments, currentUserRole }: EditModalProps) {
+  const [formData, setFormData] = useState(() => {
+    // If this is a renew modal (no id), clear service fields but retain customer/equipment/serial_no/etc.
+    if (type === 'maintenance' && !data.id) {
+      return {
+        ...data,
+        service_status: '',
+        service_start_date: '',
+        service_end_date: '',
+        invoice_number: '',
+        invoice_date: '',
+        amount: 0,
+        notes: '',
+        // history is already set in data
+      };
+    }
+    return data;
+  });
   const [selectedServiceStatus, setSelectedServiceStatus] = useState(
     type === 'maintenance' ? (data as MaintenanceRecord).service_status : ''
   );
@@ -172,8 +188,9 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments }
         <select
           value={(formData as MaintenanceRecord)?.customer_id || ''}
           onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${currentUserRole !== 'admin' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
           required
+          disabled={currentUserRole !== 'admin'}
         >
           <option value="">Select Customer</option>
           {customers?.map((customer) => (
@@ -188,8 +205,9 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments }
         <select
           value={(formData as MaintenanceRecord)?.equipment_id || ''}
           onChange={(e) => setFormData({ ...formData, equipment_id: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${currentUserRole !== 'admin' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
           required
+          disabled={currentUserRole !== 'admin'}
         >
           <option value="">Select Equipment</option>
           {equipments?.map((eq) => (
@@ -205,20 +223,22 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments }
           type="text"
           value={(formData as MaintenanceRecord)?.serial_no || ''}
           onChange={(e) => setFormData({ ...formData, serial_no: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${currentUserRole !== 'admin' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
           required
+          disabled={currentUserRole !== 'admin'}
         />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">Equipment Purchase Value</label>
         <input
           type="number"
-          step="0.01"
           min="0"
           value={(formData as MaintenanceRecord)?.equipment_purchase_value || ''}
           onChange={(e) => setFormData({ ...formData, equipment_purchase_value: parseFloat(e.target.value) })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          onWheel={e => e.currentTarget.blur()}
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${currentUserRole !== 'admin' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
           required
+          disabled={currentUserRole !== 'admin'}
         />
       </div>
       <div>
@@ -227,8 +247,9 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments }
           type="date"
           value={(formData as MaintenanceRecord)?.installation_date?.split('T')[0] || ''}
           onChange={(e) => setFormData({ ...formData, installation_date: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${currentUserRole !== 'admin' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
           required
+          disabled={currentUserRole !== 'admin'}
         />
       </div>
       <div>
@@ -237,8 +258,9 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments }
           type="date"
           value={(formData as MaintenanceRecord)?.warranty_end_date?.split('T')[0] || ''}
           onChange={(e) => setFormData({ ...formData, warranty_end_date: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${currentUserRole !== 'admin' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
           required
+          disabled={currentUserRole !== 'admin'}
         />
       </div>
       <div>
@@ -301,10 +323,10 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments }
             <label className="block text-sm font-medium text-gray-700">Invoice Amount</label>
             <input
               type="number"
-              step="0.01"
               min="0"
               value={(formData as MaintenanceRecord)?.amount || ''}
               onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+              onWheel={e => e.currentTarget.blur()}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               required
             />

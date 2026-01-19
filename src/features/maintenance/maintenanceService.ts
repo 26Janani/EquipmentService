@@ -48,8 +48,13 @@ export async function updateMaintenance(maintenance: MaintenanceRecord) {
   }
 }
 
-export async function deleteMaintenance(id: string) {
+export async function deleteMaintenance(id: string, currentUserRole: string) {
   try {
+    if (currentUserRole !== 'admin') {
+      toast.error('You do not have permission to delete maintenance records.');
+      return false;
+    }
+
     const expired = await isSessionExpired();
     if (expired) {
       toast.error('Session expired. Please log in again.');

@@ -11,9 +11,10 @@ interface AddModalProps {
   onSuccess: () => void;
   customers?: Customer[];
   equipments?: Equipment[];
+  currentUserRole?: string; // 'admin' or 'user'
 }
 
-export function AddModal({ type, onClose, onSuccess, customers, equipments }: AddModalProps) {
+export function AddModal({ type, onClose, onSuccess, customers, equipments, currentUserRole, renewData, history }: AddModalProps) {
   const [formData, setFormData] = useState<any>({});
   const [selectedServiceStatus, setSelectedServiceStatus] = useState<string>('');
 
@@ -210,9 +211,9 @@ export function AddModal({ type, onClose, onSuccess, customers, equipments }: Ad
         <label className="block text-sm font-medium text-gray-700">Equipment Purchase Value</label>
         <input
           type="number"
-          step="0.01"
           min="0"
           onChange={(e) => setFormData({ ...formData, equipment_purchase_value: parseFloat(e.target.value) })}
+          onWheel={e => e.currentTarget.blur()}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           required
         />
@@ -290,9 +291,9 @@ export function AddModal({ type, onClose, onSuccess, customers, equipments }: Ad
             <label className="block text-sm font-medium text-gray-700">Invoice Amount</label>
             <input
               type="number"
-              step="0.01"
               min="0"
               onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+              onWheel={e => e.currentTarget.blur()}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               required
             />
