@@ -242,18 +242,6 @@ export function EditModal({ type, data, onClose, onSave, customers, equipments, 
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Equipment Purchase Value</label>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          value={(formData as MaintenanceRecord)?.equipment_purchase_value || ''}
-          onChange={(e) => setFormData({ ...formData, equipment_purchase_value: parseFloat(e.target.value) })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          required
-        />
-      </div>
-      <div>
         <label className="block text-sm font-medium text-gray-700">Installation Date</label>
         <input
           type="date"
